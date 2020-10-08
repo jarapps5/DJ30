@@ -1,0 +1,3108 @@
+//  DJScene.swift
+//  DJThrty
+//  Created by welch on 4/6/16.
+//  Copyright (c) 2016 welch. All rights reserved.
+
+import SpriteKit
+import ReplayKit
+import MediaPlayer
+import StoreKit
+import SCLAlertView
+
+@available(iOS 10.0, *)
+
+public class SKTAudio {
+    public var backgroundMusicPlayer: AVAudioPlayer?
+    public var soundEffectPlayer: AVAudioPlayer?
+    
+    public class func sharedInstance() -> SKTAudio {
+        return SKTAudioInstance
+    }
+    
+    
+    public func playSoundEffect(filename: String) {
+        let url = Bundle.main.url(forResource: filename, withExtension: nil)
+        if (url == nil) {
+            print("Could not find file: \(filename)")
+            return
+        }
+        
+        var error: NSError? = nil
+        do {
+            soundEffectPlayer = try AVAudioPlayer(contentsOf: url!)
+        } catch let error1 as NSError {
+            error = error1
+            soundEffectPlayer = nil
+        }
+        if let player = soundEffectPlayer {
+            player.numberOfLoops = 0
+            player.prepareToPlay()
+            player.play()
+        } else {
+            print("Could not create audio player: \(error!)")
+        }
+    }
+}
+
+private let SKTAudioInstance = SKTAudio()
+
+class DJScene: SKScene, RPScreenRecorderDelegate, RPPreviewViewControllerDelegate, MPMediaPickerControllerDelegate, AVAudioPlayerDelegate, SKPhysicsContactDelegate, UIGestureRecognizerDelegate, RPBroadcastActivityViewControllerDelegate, RPBroadcastControllerDelegate, SKProductsRequestDelegate, SKPaymentTransactionObserver {
+    
+    let deleteIAP = UserDefaults().bool(forKey: "dontshowiap")
+    var dontShowIAP = true
+
+    let deleteIAPRightSide = UserDefaults().bool(forKey: "dontshowiaprightside")
+    var dontShowIAPRightSide = true
+
+    let activityIndicator = SKSpriteNode(imageNamed: "activityindicator")
+    let transparentBackground = SKSpriteNode()
+    
+    var product_id = "UnlockSoundEffectsLeftSide"
+    var product_id2 = "UnlockSoundEffectsRightSide"
+    
+    var didSelectLeftSide = true
+    var didSelectRightSide = true
+
+    
+    var previewViewControllerDelegate: RPPreviewViewControllerDelegate?
+    var previewViewController = RPPreviewViewController()
+    var broadcastController : RPBroadcastController?
+    let goLiveButton = SKSpriteNode(imageNamed: "live")
+    let stopLiveButton = SKSpriteNode(imageNamed: "stoplive")
+    let onAir = SKSpriteNode(imageNamed: "liveicon")
+    
+    
+    
+    fileprivate var player:AVPlayer! = AVPlayer()
+    fileprivate var player2:AVPlayer! = AVPlayer()
+    
+    var startingAngle:CGFloat = 0.0
+    var startingTime = TimeInterval()
+    var startTime = TimeInterval()
+    var lastNodeSelected:SKNode?
+    var lastNodeSelected2:SKNode?
+    var lastNodeSelected3:SKNode?
+    var lastNodeSelected4:SKNode?
+    var lastNodeSelected5:SKNode?
+    var lastNodeSelected6:SKNode?
+    
+    
+    
+    var previousAngle:CGFloat = 0.0
+    var previousAngleRightSide:CGFloat = 0.0
+    var location = CGPoint(x: 0, y: 0)
+    var timer = Timer()
+    var clock: Timer!
+    var clock2: Timer!
+    var clock3: Timer!
+    var timeLabel: SKLabelNode!
+    var slider: UISlider!
+    var sliderRight: UISlider!
+    var middleSlider: UISlider!
+    var pitchSlider: UISlider!
+    var pitchSliderRight: UISlider!
+    var mediaPicker: MPMediaPickerController?
+    var mediaPicker2: MPMediaPickerController?
+    
+    var pitchLabel = SKSpriteNode(imageNamed: "pitch")
+    let kickButton = SKSpriteNode(imageNamed: "kick")
+    let hornButton = SKSpriteNode(imageNamed: "horn")
+    let clapButton = SKSpriteNode(imageNamed: "clap")
+    let bangButton = SKSpriteNode(imageNamed: "bang")
+    let bombButton = SKSpriteNode(imageNamed: "bomb")
+    let audienceClap = SKSpriteNode(imageNamed: "cheer")
+    
+    let bassDrumButton = SKSpriteNode(imageNamed: "bassdrum")
+    let sirenButton = SKSpriteNode(imageNamed: "siren")
+    let gunButton2 = SKSpriteNode(imageNamed: "bang2")
+    let bassButton = SKSpriteNode(imageNamed: "bass")
+    let laserButton = SKSpriteNode(imageNamed: "laser")
+    
+    let djButton = SKSpriteNode(imageNamed: "dj")
+    let djButton2 = SKSpriteNode(imageNamed: "scratch2")
+    let synthButton = SKSpriteNode(imageNamed: "synth")
+    let hatButton = SKSpriteNode(imageNamed: "hat")
+    let cowButton = SKSpriteNode(imageNamed: "cow")
+    
+    let snareButton = SKSpriteNode(imageNamed: "snare")
+    let cymbalButton = SKSpriteNode(imageNamed: "cymbal")
+    let sfxButton = SKSpriteNode(imageNamed: "sfx")
+    let sfxButton2 = SKSpriteNode(imageNamed: "sfx")
+    
+    
+    
+    let restorePurchasesButton = SKSpriteNode(imageNamed: "restorebuttondj30")
+    let settingsButton = SKSpriteNode(imageNamed: "settings4")
+    let closeSettingsButton = SKSpriteNode(imageNamed: "settings4")
+    
+    let unlockCameraButton = SKSpriteNode(imageNamed: "unlockcamerab")
+    let cameraButton = SKSpriteNode(imageNamed: "camerabutton2")
+    let pianoButtonClose = SKSpriteNode(imageNamed: "camerabutton2")
+    
+    
+    
+    let sfxButtonRight = SKSpriteNode(imageNamed: "sfxright")
+    let sfxButtonRight2 = SKSpriteNode(imageNamed: "sfxright")
+    
+    let sfxButtonOrange = SKSpriteNode(imageNamed: "sfxorange")
+    let sfxButtonBlack = SKSpriteNode(imageNamed: "sfxblack")
+    
+    let sfxButtonOrange2 = SKSpriteNode(imageNamed: "sfxorange")
+    let sfxButtonBlack2 = SKSpriteNode(imageNamed: "sfxblack")
+    
+    
+    let flash = SKSpriteNode(imageNamed: "recordflash")
+    let leftBG = SKSpriteNode(imageNamed: "leftbg")
+    let rightBG = SKSpriteNode(imageNamed: "rightbg")
+    let bottomBG = SKSpriteNode(imageNamed: "12")
+    let leftPlayButton = SKSpriteNode(imageNamed: "leftplay")
+    let leftPauseButton = SKSpriteNode(imageNamed: "leftpause")
+    let rightPlayButton = SKSpriteNode(imageNamed: "rightplay")
+    let rightPauseButton = SKSpriteNode(imageNamed: "rightpause")
+    let recordScreenButton = SKSpriteNode(imageNamed: "recordscreen")
+    let recordScreenButton2 = SKSpriteNode(imageNamed: "recordscreen")
+    let stopRecordButton = SKSpriteNode(imageNamed: "stoprecording")
+    let background = SKSpriteNode(imageNamed: "bggrey")
+    let addMusicToLeftTurntable = SKSpriteNode(imageNamed: "addmusicleft")
+    let addMusicToRightTurntable = SKSpriteNode(imageNamed: "addmusicright")
+    
+    var leftTurntable = SKSpriteNode(imageNamed: "ttblue")
+    var rightTurntable = SKSpriteNode(imageNamed: "ttgreen")
+    
+    var leftTurntableBlack = SKSpriteNode(imageNamed: "ttt")
+    var rightTurntableYellow = SKSpriteNode(imageNamed: "ytt")
+    
+    var leftTurntableRed = SKSpriteNode(imageNamed: "ttred")
+    var rightTurntableOrange = SKSpriteNode(imageNamed: "ott")
+    
+    
+    var leftTurntable2 = SKSpriteNode(imageNamed: "bluett")
+    var rightTurntable2 = SKSpriteNode(imageNamed: "greentt")
+    
+    var divideTT = SKSpriteNode(imageNamed: "divider")
+    
+    let greenBgRate = SKSpriteNode(imageNamed: "bgrate")
+    let blueBgRate = SKSpriteNode(imageNamed: "bgrate2")
+    
+    let addRate = SKSpriteNode(imageNamed: "uprate")
+    let downRate = SKSpriteNode(imageNamed: "downrate")
+    let addRate2 = SKSpriteNode(imageNamed: "uprate")
+    let downRate2 = SKSpriteNode(imageNamed: "downrate")
+    let leftBar = SKSpriteNode(imageNamed: "leftbar")
+    let rightBar = SKSpriteNode(imageNamed: "rightbar")
+    let topBar = SKSpriteNode(imageNamed: "topbluebar")
+    let topBar2 = SKSpriteNode(imageNamed: "topgreenbar")
+    
+    let moveSliderToLeftButton = SKSpriteNode(imageNamed: "moveleft")
+    let moveSliderToRightButton = SKSpriteNode(imageNamed: "moveright")
+    
+    
+    /*let recordSound = SKAction.playSoundFileNamed("recordsound.wav", waitForCompletion: true)
+    let kickSound = SKAction.playSoundFileNamed("kick.wav", waitForCompletion: true)
+    let hornSound = SKAction.playSoundFileNamed("horn.wav", waitForCompletion: true)
+    let clapSound = SKAction.playSoundFileNamed("clap.wav", waitForCompletion: true)
+    let gunSound = SKAction.playSoundFileNamed("gun.wav", waitForCompletion: true)
+    let bombSound = SKAction.playSoundFileNamed("bomb.wav", waitForCompletion: true)
+    let clapSound2 = SKAction.playSoundFileNamed("clap2.wav", waitForCompletion: true)
+    
+    
+    let scratchSound = SKAction.playSoundFileNamed("dj.wav", waitForCompletion: true)
+    let scratchSound2 = SKAction.playSoundFileNamed("dj2.wav", waitForCompletion: true)
+    let bassDrumSound = SKAction.playSoundFileNamed("bassdrum.wav", waitForCompletion: true)
+    
+    
+    let gunSound2 = SKAction.playSoundFileNamed("gun2.wav", waitForCompletion: true)
+    let synthSound = SKAction.playSoundFileNamed("synth.wav", waitForCompletion: true)
+    let laserSound = SKAction.playSoundFileNamed("laser2.wav", waitForCompletion: true)
+    let bassSound = SKAction.playSoundFileNamed("bass.wav", waitForCompletion: true)
+    let sirenSound = SKAction.playSoundFileNamed("siren.wav", waitForCompletion: true)
+    
+    let hatSound = SKAction.playSoundFileNamed("hat.wav", waitForCompletion: true)
+    let cowSound = SKAction.playSoundFileNamed("cow.wav", waitForCompletion: true)
+    let snareSound = SKAction.playSoundFileNamed("snare.wav", waitForCompletion: true)
+    let cymbalSound = SKAction.playSoundFileNamed("cymbal.wav", waitForCompletion: true)*/
+    
+    let changeThemeLabel = SKSpriteNode(imageNamed: "ct")
+    let changeTimeLabel = SKSpriteNode(imageNamed: "srt")
+    let changeCameraLabel = SKSpriteNode(imageNamed: "changecameralabel")
+    
+    
+    
+    
+    
+    var rewindPlayer = AVPlayer()
+    
+    var music2 = MPMediaItem()
+    var music = MPMediaItem()
+    var musicPlayer = AVAudioPlayer()
+    var musicPlayer2 = AVAudioPlayer()
+    
+    var timerToStartGame = 29
+    var score : Int = 0
+    var timerCountDownLabel: SKLabelNode! = SKLabelNode()
+    
+    var timerForSixtySeconds = 59
+    var score2 : Int = 0
+    var timerCountDownLabelsixtySeconds: SKLabelNode! = SKLabelNode()
+    
+    var timerForUnlimited = 0
+    var score3 : Int = 0
+    var timerCountDownLabelUnlimited: SKLabelNode! = SKLabelNode()
+    
+    
+    var titleLabel: SKLabelNode! = SKLabelNode()
+    var titleLabel2: SKLabelNode! = SKLabelNode()
+    
+    var counter = Int()
+    
+    var enableRateEqualsToFalse = false
+    var enableRateEqualsToFalse2 = false
+    
+    var rotatingNode:SKNode?
+    
+    var isMediaPickerOne = false
+    var isMediaPickerTwo = false
+    var isMusicSelectedForLeft = false
+    var isMusicSelectedForRight = false
+    
+    var touchingScreen = false
+    var touchingScreen2 = false
+    
+    var didSelect60Seconds = false
+    var didSelect30Seconds = false
+    var didSelectUnlimitedSeconds = false
+    
+    var didCloseBothSFXButtons = false
+    var didCloseBothSFXButtons2 = false
+    
+    
+    var didChooseOrangeAndRedTheme = false
+    var didChooseYellowAndTurq = false
+    var didChooseGreenAndBlue = false
+    
+    //var customSC = UISegmentedControl()
+    //let items = ["30 Seconds", "60 Seconds", "Unlimited"]
+    
+    var customSC2 = UISegmentedControl()
+    let itemsForThemes = ["Blue/Green", "Turq/Yellow", "Red/Orange"]
+    
+    let unlockCamera = UserDefaults().bool(forKey: "unlock")
+    
+    var timeCount:TimeInterval = 0 // seconds
+    
+    //SHOW CAMERA..................................................................................................
+    
+    var previewCamera: UIView! = UIView()
+    var captureSession: AVCaptureSession?
+    var stillImageOutput: AVCaptureStillImageOutput?
+    var previewLayer = AVCaptureVideoPreviewLayer()
+    var error: NSError?
+    var captureDevice:AVCaptureDevice! = nil
+    
+    var previewCamera2: UIView! = UIView()
+    var captureSession2: AVCaptureSession?
+    var stillImageOutput2: AVCaptureStillImageOutput?
+    var previewLayer2 = AVCaptureVideoPreviewLayer()
+    var error2: NSError?
+    var captureDevice2:AVCaptureDevice! = nil
+    
+    
+    
+    fileprivate struct ScreenSize {
+        static let width     = UIScreen.main.bounds.size.width
+        static let height    = UIScreen.main.bounds.size.height
+        static let maxLength = max(width, height)
+        static let minLength = min(width, height)
+    }
+    
+    var screenRecordingToggleEnabled: Bool {
+        return true //NSUserDefaults.standardUserDefaults().boolForKey("AppConfiguration.Defaults.screenRecorderEnabledKey")
+    }
+    
+    var countDownLabel: SKLabelNode! = SKLabelNode()
+    var timerToStartAd = 2
+   
+    let playerTwoTimeLabel = SKLabelNode()
+    let playerTimeLabel = SKLabelNode()
+
+    
+override func didMove(to view: SKView) {
+    
+    //self.view?.showsNodeCount = true
+
+    SKPaymentQueue.default().add(self)
+
+    
+    if (UserDefaults.standard.bool(forKey: "unlockSoundEffectleftSide")){
+        print("left sound effects will be unlocked")
+    } else {
+        print("Levels will be locked and will show ads")
+    }
+    
+    
+    
+    if (UserDefaults.standard.bool(forKey: "unlockSoundEffectRightSide")){
+        print("left sound effects will be unlocked")
+    } else {
+        print("Levels will be locked and will show ads")
+    }
+
+        goLiveButton.position = CGPoint(x: self.size.width / 2.0, y:self.size.height / 1.5)
+        goLiveButton.name = "live"
+        goLiveButton.zPosition = 100
+        addChild(goLiveButton)
+        
+    
+        playerTwoTimeLabel.fontName = ""
+        playerTwoTimeLabel.position = CGPoint(x: self.size.width / 1.04, y: self.size.height / 1.4)
+        playerTwoTimeLabel.fontSize = 20
+        playerTwoTimeLabel.zPosition = 500
+        self.addChild(playerTwoTimeLabel)
+
+        playerTimeLabel.fontName = ""
+        playerTimeLabel.position = CGPoint(x: self.size.width / 28, y: self.size.height / 1.4)
+        playerTimeLabel.fontSize = 20
+        playerTimeLabel.zPosition = 500
+        self.addChild(playerTimeLabel)
+
+        
+        captureSession = AVCaptureSession()
+        captureSession!.sessionPreset = AVCaptureSession.Preset.photo
+        addCamera()
+        
+        
+        leftTurntable.position = CGPoint(x: self.size.width / 3.5, y: self.size.height / 1.9)
+        leftTurntable.zPosition = 20
+        leftTurntable.setScale(1.3)
+        leftTurntable.name = "lefttt"
+        addChild(leftTurntable)
+        
+        rightTurntable.position = CGPoint(x: self.size.width / 1.4, y: self.size.height / 1.9)
+        rightTurntable.zPosition = 20
+        rightTurntable.setScale(1.3)
+        rightTurntable.name = "rightt"
+        addChild(rightTurntable)
+
+        leftPlayButton.position = CGPoint(x: self.size.width / 8.0, y: self.size.height / 3.4)
+        leftPlayButton.zPosition = 26
+        leftPlayButton.isHidden = true
+        leftPlayButton.name = "playleft"
+        addChild(leftPlayButton)
+        
+        leftPauseButton.position = CGPoint(x: self.size.width / 2.2, y: self.size.height / 3.4)
+        leftPauseButton.zPosition = 26
+        leftPauseButton.name = "pauseleft"
+        leftPauseButton.isHidden = true
+        addChild(leftPauseButton)
+        
+        rightPlayButton.position = CGPoint(x: self.size.width / 1.14, y: self.size.height / 3.4)
+        rightPlayButton.zPosition = 26
+        rightPlayButton.name = "playright"
+        rightPlayButton.isHidden = true
+        addChild(rightPlayButton)
+        
+        rightPauseButton.position = CGPoint(x: self.size.width / 1.82, y: self.size.height / 3.4)
+        rightPauseButton.zPosition = 26
+        rightPauseButton.name = "pauseright"
+        rightPauseButton.isHidden = true
+        addChild(rightPauseButton)
+        
+        addMusicToLeftTurntable.position = CGPoint(x: self.size.width / 28, y: self.size.height / 1.21)
+        addMusicToLeftTurntable.zPosition = 30
+        addMusicToLeftTurntable.name = "addmusictoleft"
+        addChild(addMusicToLeftTurntable)
+        
+        addMusicToRightTurntable.position = CGPoint(x: self.size.width / 1.04, y: self.size.height / 1.21)
+        addMusicToRightTurntable.zPosition = 30
+        addMusicToRightTurntable.name = "addmusictoright"
+        addChild(addMusicToRightTurntable)
+    
+        cameraButton.position = CGPoint(x: self.size.width / 5.0, y: self.size.height / 5.5)
+        cameraButton.zPosition = 100
+        cameraButton.name = "camera"
+        addChild(cameraButton)
+    
+        settingsButton.position = CGPoint(x: self.size.width / 1.2, y: self.size.height / 5.5)
+        settingsButton.zPosition = 100
+        settingsButton.name = "settings"
+        addChild(settingsButton)
+        
+        topBar.position = CGPoint(x: self.size.width / 3.5, y: self.size.height / 1.19)
+        topBar.yScale = 1.5
+        topBar.zPosition = 22
+        addChild(topBar)
+        
+        topBar2.position = CGPoint(x: self.size.width / 1.4, y: self.size.height / 1.19)
+        topBar2.yScale = 1.5
+        topBar2.zPosition = 22
+        addChild(topBar2)
+        
+        divideTT.position = CGPoint(x: self.size.width / 2, y: self.size.height / 2)
+        divideTT.zPosition = 23
+        divideTT.yScale = 2.0
+        addChild(divideTT)
+        
+        blueBgRate.position = CGPoint(x: self.size.width / 1.04, y: self.size.height / 1.8)
+        blueBgRate.zPosition = 40
+        addChild(blueBgRate)
+        
+        greenBgRate.position = CGPoint(x: self.size.width / 28, y: self.size.height / 1.8)
+        greenBgRate.zPosition = 40
+        addChild(greenBgRate)
+        
+        addRate.position = CGPoint(x: self.size.width / 28, y: self.size.height / 1.55)
+        addRate.zPosition = 42
+        addRate.name = "addrate"
+        addChild(addRate)
+        
+        downRate.position = CGPoint(x: self.size.width / 28, y: self.size.height / 2.15)
+        downRate.zPosition = 42
+        downRate.name = "downrate"
+        addChild(downRate)
+        
+//==================================================================================================================
+        
+        
+        addRate2.position = CGPoint(x: self.size.width / 1.04, y: self.size.height / 1.55)
+        addRate2.zPosition = 42
+        addRate2.name = "addrate2"
+        addChild(addRate2)
+        
+        downRate2.position = CGPoint(x: self.size.width / 1.04, y: self.size.height / 2.15)
+        downRate2.zPosition = 42
+        downRate2.name = "downrate2"
+        addChild(downRate2)
+        
+        
+//SOUNDS============================================================================================================
+        sfxButton.position = CGPoint(x: self.size.width / 28, y: self.size.height / 3.4)
+        sfxButton.zPosition = 42
+        sfxButton.name = "sfx"
+        addChild(sfxButton)
+        
+        sfxButtonRight.position = CGPoint(x: self.size.width / 1.04, y: self.size.height / 3.4)
+        sfxButtonRight.zPosition = 42
+        sfxButtonRight.name = "sfxright"
+        addChild(sfxButtonRight)
+//SOUNDS============================================================================================================
+        
+        
+        bottomBG.position = CGPoint(x: self.size.width / 2, y: self.size.height / 5.5)
+        bottomBG.zPosition = 25
+        addChild(bottomBG)
+        
+        background.position = CGPoint(x: self.size.width / 2, y: self.size.height / 2)
+        background.zPosition = 5
+        addChild(background)
+        
+        /*let fadeIn = SKAction.fadeInWithDuration(0.8)
+         let fadeOut = SKAction.fadeOutWithDuration(0.8)
+         let sequenceFade = SKAction.sequence([fadeIn, fadeOut])
+         let repeatFade = SKAction.repeatActionForever(sequenceFade)*/
+        
+        
+        titleLabel2 = SKLabelNode(fontNamed: "TimeBurner")
+        titleLabel2.fontColor = UIColor.white
+        titleLabel2.text = String("<- Please press on the + sign to add music")
+        titleLabel2.zPosition = 40
+        titleLabel2.fontSize = 17
+        titleLabel2.position = CGPoint(x: self.size.width / 3.6, y: self.size.height / 1.2)
+        addChild(titleLabel2)
+        
+        titleLabel = SKLabelNode(fontNamed: "TimeBurner")
+        titleLabel.fontColor = UIColor.white
+        titleLabel.text = String("Please press on the + sign to add music ->")
+        titleLabel.zPosition = 40
+        titleLabel.fontSize = 17
+        titleLabel.position = CGPoint(x: self.size.width / 1.4, y: self.size.height / 1.2)
+        addChild(self.titleLabel)
+        
+        leftTurntable2.position = CGPoint(x: self.size.width / 3.5, y: self.size.height / 1.9)
+        leftTurntable2.zPosition = 21
+        leftTurntable2.setScale(1.3)
+        addChild(leftTurntable2)
+        
+        rightTurntable2.position = CGPoint(x: self.size.width / 1.4, y: self.size.height / 1.9)
+        rightTurntable2.zPosition = 21
+        rightTurntable2.setScale(1.3)
+        addChild(rightTurntable2)
+        
+        
+        
+        
+        //move slider to left and right===================================================================================================
+        
+        moveSliderToLeftButton.position = CGPoint(x: self.frame.size.width / 2.9, y: self.size.height / 5.3)
+        moveSliderToLeftButton.zPosition = 50
+        moveSliderToLeftButton.name = "left"
+        addChild(moveSliderToLeftButton)
+        
+        moveSliderToRightButton.position = CGPoint(x: self.size.width / 1.53, y: self.size.height / 5.3)
+        moveSliderToRightButton.zPosition = 50
+        moveSliderToRightButton.name = "right"
+        addChild(moveSliderToRightButton)
+        
+        //move slider to left and right===================================================================================================
+        
+        
+        leftBar.position = CGPoint(x: self.size.width / 28, y: self.size.height / 1.7)
+        leftBar.zPosition = 23
+        leftBar.yScale = 2.0
+        addChild(leftBar)
+        
+        rightBar.position = CGPoint(x: self.size.width / 1.04, y: self.size.height / 1.7)
+        rightBar.zPosition = 23
+        rightBar.yScale = 2.0
+        addChild(rightBar)
+        
+        
+        
+        //FUNCTIONS====================================================================================================================
+        
+        greenBlueTheme()
+        recordItButton()
+        startTimerForThritySeconds()
+        
+        //FUNCTIONS=======================================================================================================================
+        
+        
+        
+        //all iphones
+        if UIDevice.current.userInterfaceIdiom == .phone {
+            
+            let scaleFactor = UIScreen.main.bounds.width / 320
+            
+            middleSlider = UISlider(frame: CGRect(x: self.view!.bounds.width/2 - 150/2, y: self.view!.bounds.height/2 * 1.7, width: 150, height: 50))
+            middleSlider.tintColor = UIColor.white
+            middleSlider.minimumTrackTintColor = UIColor.white
+            middleSlider.maximumTrackTintColor = UIColor.white
+            middleSlider.setThumbImage(UIImage(named: "mixerb1"), for: UIControl.State())
+            middleSlider.maximumValue = 2.0
+            middleSlider.minimumValue =  0.0
+            middleSlider.value = 1.0
+            middleSlider.isContinuous = true
+            middleSlider.isUserInteractionEnabled = true
+            middleSlider.addTarget(self, action: #selector(middleSliderChangeAudio), for: UIControl.Event.allEvents)
+            self.view?.addSubview(middleSlider)
+            
+            
+            
+            
+            //print("\(middleSlider.value)") use to log messgae in the console
+            //UIColor.init(red: 0, green: 0.5, blue: 1.0, alpha: 1.0)
+            slider = UISlider(frame:CGRect(x: 40 * scaleFactor, y: 12 * scaleFactor, /*change size*/width: 200, height: 20))
+            slider.tintColor = UIColor.red
+            slider.maximumTrackTintColor = UIColor.white
+            slider.setThumbImage(UIImage(named: "slider3"), for: UIControl.State())
+            self.view!.addSubview(slider)
+            
+            
+            sliderRight = UISlider(frame:CGRect(/*width*/x: 178 * scaleFactor, /*height*/y: 12 * scaleFactor, /*changesize*/width: 200, height: 20))
+            sliderRight.tintColor = UIColor.red
+            sliderRight.setThumbImage(UIImage(named: "slider3"), for: UIControl.State())
+            sliderRight.maximumTrackTintColor = UIColor.white
+            sliderRight.transform = sliderRight.transform.rotated(by: CGFloat(180/180*M_PI))
+            self.view!.addSubview(sliderRight)
+        }
+        
+        
+        //iphone4s
+        if UIDevice.current.userInterfaceIdiom == .phone && ScreenSize.maxLength < 568.0 {
+            bottomBG.position = CGPoint(x: self.size.width / 2, y: self.size.height / 10)
+            leftPlayButton.position = CGPoint(x: self.size.width / 7.5, y: self.size.height / 9)
+            leftPauseButton.position = CGPoint(x: self.size.width / 3.2, y: self.size.height / 9)
+            rightPlayButton.position = CGPoint(x: self.size.width / 1.2, y: self.size.height / 9)
+            rightPauseButton.position = CGPoint(x: self.size.width / 1.5, y: self.size.height / 9)
+            topBar.position = CGPoint(x: self.size.width / 3.5, y: self.size.height / 1.11)
+            topBar2.position = CGPoint(x: self.size.width / 1.4, y: self.size.height / 1.11)
+            titleLabel2.position = CGPoint(x: self.size.width / 3.6, y: self.size.height / 1.12)
+            titleLabel.position = CGPoint(x: self.size.width / 1.4, y: self.size.height / 1.12)
+            addMusicToLeftTurntable.position = CGPoint(x: self.size.width / 28, y: self.size.height / 1.15)
+            addMusicToRightTurntable.position = CGPoint(x: self.size.width / 1.04, y: self.size.height / 1.15)
+        }
+        
+        
+        //ipads
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            let scaleFactor = UIScreen.main.bounds.width / 320
+            let scaleFactor2 = UIScreen.main.bounds.height / 480
+            
+            bottomBG.position = CGPoint(x: self.size.width / 2, y: self.size.height / 16)
+            leftPlayButton.position = CGPoint(x: self.size.width / 8.0, y: self.size.height / 5.5)
+            leftPauseButton.position = CGPoint(x: self.size.width / 2.2, y: self.size.height / 5.5)
+            rightPlayButton.position = CGPoint(x: self.size.width / 1.15, y: self.size.height / 5.5)
+            rightPauseButton.position = CGPoint(x: self.size.width / 1.8, y: self.size.height / 5.5)
+            topBar.position = CGPoint(x: self.size.width / 3.5, y: self.size.height / 1.04)
+            topBar2.position = CGPoint(x: self.size.width / 1.4, y: self.size.height / 1.04)
+            titleLabel.position = CGPoint(x: self.size.width / 1.4, y: self.size.height / 1.04)
+            titleLabel2.position = CGPoint(x: self.size.width / 3.7, y: self.size.height / 1.04)
+            addMusicToLeftTurntable.position = CGPoint(x: self.size.width / 28, y: self.size.height / 1.08)
+            addMusicToRightTurntable.position = CGPoint(x: self.size.width / 1.04, y: self.size.height / 1.08)
+            moveSliderToLeftButton.position = CGPoint(x: self.size.width / 2.55, y: self.size.height / 18)
+            moveSliderToRightButton.position = CGPoint(x: self.size.width / 1.62, y: self.size.height / 18)
+            playerTwoTimeLabel.position = CGPoint(x: self.size.width / 1.04, y: self.size.height / 1.3)
+            playerTimeLabel.position = CGPoint(x: self.size.width / 28, y: self.size.height / 1.3)
+
+            
+            cameraButton.position = CGPoint(x: self.size.width / 5.0, y: self.size.height / 14.0)
+            settingsButton.position = CGPoint(x: self.size.width / 1.2, y: self.size.height / 14.0)
+            
+            middleSlider = UISlider(frame: CGRect(x: 130 * scaleFactor, y: 650, width: 200, height: 150))
+            middleSlider.tintColor = UIColor.white
+            middleSlider.setThumbImage(UIImage(named: "mixerb1"), for: UIControl.State())
+            middleSlider.minimumTrackTintColor = UIColor.white
+            middleSlider.maximumTrackTintColor = UIColor.white
+            middleSlider.maximumValue = 2.0
+            middleSlider.minimumValue =  0.0
+            middleSlider.value = 1.0
+            middleSlider.isContinuous = true
+            middleSlider.isUserInteractionEnabled = true
+            middleSlider.addTarget(self, action: #selector(middleSliderChangeAudio), for: UIControl.Event.allEvents)
+            self.view?.addSubview(middleSlider)
+            
+            slider = UISlider(frame:CGRect(x: 45 * scaleFactor, y: 27 * scaleFactor2, /*change size*/width: 275, height: 20))
+            slider.tintColor = UIColor.red
+            slider.setThumbImage(UIImage(named: "slider3"), for: UIControl.State())
+            slider.maximumTrackTintColor = UIColor.white
+            self.view!.addSubview(slider)
+            
+            sliderRight = UISlider(frame:CGRect(/*width*/x: 185 * scaleFactor, /*height*/y: 27 * scaleFactor2, /*changesize*/width: 275, height: 20))
+            sliderRight.tintColor = UIColor.red
+            sliderRight.setThumbImage(UIImage(named: "slider3"), for: UIControl.State())
+            sliderRight.maximumTrackTintColor = UIColor.white
+            sliderRight.transform = sliderRight.transform.rotated(by: CGFloat(180/180*M_PI))
+            self.view!.addSubview(sliderRight)
+        }
+    }
+    
+    
+
+    
+    
+    @objc func changeColor(_ sender: UISegmentedControl) {
+        switch sender.selectedSegmentIndex {
+        case 1:
+            blackYellowTheme()
+            
+        case 2:
+            print("yellow black")
+            redOrangeTheme()
+            
+        default:
+            greenBlueTheme()
+        }
+    }
+    
+
+    func greenBlueTheme() {
+        
+        didChooseGreenAndBlue = true
+        didChooseOrangeAndRedTheme = false
+        didChooseYellowAndTurq = false
+        
+        
+        blueBgRate.texture = SKTexture(imageNamed: "bgrate2")
+        greenBgRate.texture = SKTexture(imageNamed: "bgrate")
+        leftTurntable2.texture = SKTexture(imageNamed: "ttblue")
+        rightTurntable2.texture = SKTexture(imageNamed: "ttgreen")
+        leftTurntable.texture = SKTexture(imageNamed: "ttblue")
+        rightTurntable.texture = SKTexture(imageNamed: "ttgreen")
+        leftPlayButton.texture = SKTexture(imageNamed: "leftplay")
+        leftPauseButton.texture = SKTexture(imageNamed: "leftpause")
+        rightPauseButton.texture = SKTexture(imageNamed: "rightpause")
+        rightPlayButton.texture = SKTexture(imageNamed: "rightplay")
+        topBar2.texture = SKTexture(imageNamed: "topgreenbar")
+        topBar.texture = SKTexture(imageNamed: "topbluebar")
+        addMusicToLeftTurntable.texture = SKTexture(imageNamed: "addmusicleft")
+        addMusicToRightTurntable.texture = SKTexture(imageNamed: "addmusicright")
+        sfxButtonRight.texture = SKTexture(imageNamed: "sfxorange")
+        sfxButtonRight2.texture = SKTexture(imageNamed: "sfxorange")
+        sfxButton.texture = SKTexture(imageNamed: "sfx")
+        sfxButton2.texture = SKTexture(imageNamed: "sfx")
+        sfxButtonRight.texture = SKTexture(imageNamed: "sfxright")
+        sfxButtonRight2.texture = SKTexture(imageNamed: "sfxright")
+    }
+    
+    
+    
+    func blackYellowTheme() {
+        
+        didChooseYellowAndTurq = true
+        didChooseOrangeAndRedTheme = false
+        didChooseGreenAndBlue = false
+        
+        blueBgRate.texture = SKTexture(imageNamed: "bgrateyellow")
+        greenBgRate.texture = SKTexture(imageNamed: "turqleft")
+        sfxButtonRight.texture = SKTexture(imageNamed: "sfxyellow")
+        sfxButtonRight2.texture = SKTexture(imageNamed: "sfxyellow")
+        sfxButton.texture = SKTexture(imageNamed: "sfxturq")
+        sfxButton2.texture = SKTexture(imageNamed: "sfxturq")
+        leftTurntable2.texture = SKTexture(imageNamed: "ttt")
+        rightTurntable2.texture = SKTexture(imageNamed: "ytt")
+        leftTurntable.texture = SKTexture(imageNamed: "ttt")
+        rightTurntable.texture = SKTexture(imageNamed: "ytt")
+        leftPlayButton.texture = SKTexture(imageNamed: "leftplayturq")
+        leftPauseButton.texture = SKTexture(imageNamed: "leftturq")
+        rightPauseButton.texture = SKTexture(imageNamed: "leftpauseyellow")
+        rightPlayButton.texture = SKTexture(imageNamed: "rightplayyellow")
+        topBar2.texture = SKTexture(imageNamed: "topyellowbar")
+        topBar.texture = SKTexture(imageNamed: "topbarturq")
+        addMusicToLeftTurntable.texture = SKTexture(imageNamed: "addmusicturq")
+        addMusicToRightTurntable.texture = SKTexture(imageNamed: "addmusictorightyellow")
+    }
+    
+    
+    func redOrangeTheme() {
+        
+        didChooseOrangeAndRedTheme = true
+        didChooseGreenAndBlue = false
+        didChooseYellowAndTurq = false
+        
+        blueBgRate.texture = SKTexture(imageNamed: "redbar")
+        greenBgRate.texture = SKTexture(imageNamed: "orangebar")
+        sfxButtonRight.texture = SKTexture(imageNamed: "sfxred")
+        sfxButtonRight2.texture = SKTexture(imageNamed: "sfxred")
+        sfxButton.texture = SKTexture(imageNamed: "sfxorange")
+        sfxButton2.texture = SKTexture(imageNamed: "sfxorange")
+        leftTurntable2.texture = SKTexture(imageNamed: "ott")
+        rightTurntable2.texture = SKTexture(imageNamed: "ttred")
+        leftTurntable.texture = SKTexture(imageNamed: "ott")
+        rightTurntable.texture = SKTexture(imageNamed: "ttred")
+        leftPlayButton.texture = SKTexture(imageNamed: "leftplayorange")
+        leftPauseButton.texture = SKTexture(imageNamed: "leftpauseorange")
+        rightPauseButton.texture = SKTexture(imageNamed: "rightpausered")
+        rightPlayButton.texture = SKTexture(imageNamed: "rightplayred")
+        topBar2.texture = SKTexture(imageNamed: "topbarred")
+        topBar.texture = SKTexture(imageNamed: "topbarorange")
+        addMusicToLeftTurntable.texture = SKTexture(imageNamed: "addmusicorange")
+        addMusicToRightTurntable.texture = SKTexture(imageNamed: "addmusicred")
+    }
+    
+    
+    func pressSettingsButton() {
+        let scaleFactor = UIScreen.main.bounds.width / 320
+                
+        changeThemeLabel.position = CGPoint(x: self.size.width / 1.4, y: self.size.height / 1.5)
+        changeThemeLabel.zPosition = 40
+        addChild(changeThemeLabel)
+        
+        /*restorePurchasesButton.position = CGPoint(x: self.size.width / 3.5, y: self.size.height / 1.78)
+        restorePurchasesButton.zPosition = 100
+        restorePurchasesButton.name = "restore"
+        restorePurchasesButton.setScale(1.5)
+        addChild(restorePurchasesButton)*/
+
+        
+        if UIDevice.current.userInterfaceIdiom == .phone {
+            
+            /*customSC = UISegmentedControl(items: items)
+            customSC.frame = (CGRect(x: 30 * scaleFactor, y: 65 * scaleFactor, width: 125 * scaleFactor, height: 20 * scaleFactor))
+            customSC.layer.cornerRadius = 5.0
+            customSC.backgroundColor = UIColor.black
+            customSC.tintColor = UIColor.white
+            customSC.addTarget(self, action: #selector(DJScene.changeTimer(_:)), for: .valueChanged)
+            self.view!.addSubview(customSC)*/
+            
+            customSC2 = UISegmentedControl(items: itemsForThemes)
+            customSC2.frame = (CGRect(x: 165 * scaleFactor, y: 65 * scaleFactor, width: 125 * scaleFactor, height: 20 * scaleFactor))
+            customSC2.layer.cornerRadius = 5.0
+            customSC2.backgroundColor = UIColor.white
+            if #available(iOS 13.0, *) {
+                customSC2.selectedSegmentTintColor = UIColor.lightGray
+            } else {
+                // Fallback on earlier versions
+            }
+            customSC2.addTarget(self, action: #selector(DJScene.changeColor(_:)), for: .valueChanged)
+            self.view!.addSubview(customSC2)
+        }
+        
+        
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            
+            /*customSC = UISegmentedControl(items: items)
+            customSC.frame = (CGRect(x: self.view!.bounds.width/2 - 840/2, y: 100 * scaleFactor, width: 400, height: 60))
+            customSC.layer.cornerRadius = 5.0
+            customSC.backgroundColor = UIColor.black
+            customSC.tintColor = UIColor.white
+            customSC.addTarget(self, action: #selector(DJScene.changeTimer(_:)), for: .valueChanged)
+            self.view!.addSubview(customSC)*/
+            
+            customSC2 = UISegmentedControl(items: itemsForThemes)
+            customSC2.selectedSegmentIndex = UISegmentedControl.noSegment
+            customSC2.frame = (CGRect(x: 165 * scaleFactor, y: 100 * scaleFactor, width: 400, height: 60))
+            customSC2.layer.cornerRadius = 5.0
+            customSC2.backgroundColor = UIColor.white
+            customSC2.tintColor = UIColor.black
+            customSC2.addTarget(self, action: #selector(DJScene.changeColor(_:)), for: .valueChanged)
+            self.view!.addSubview(customSC2)
+            
+        }
+    }
+    
+    
+//IN APP PURCHASE CODE---------------------------------------------------------------------------------------------
+    
+    func addTransparentBG() {
+        transparentBackground.position = CGPoint(x: self.size.width / 2, y: self.size.height / 2)
+        transparentBackground.size = CGSize(width: self.size.width, height: self.size.height)
+        transparentBackground.color = UIColor.black
+        transparentBackground.alpha = 0.5
+        transparentBackground.zPosition = 300
+        addChild(transparentBackground)
+    }
+    
+    
+    func unlockLeftSoundEffects() {
+        didSelectLeftSide = true
+        didSelectRightSide = false
+       print("About to fetch the product...")
+
+            // Can make payments
+        
+            if (SKPaymentQueue.canMakePayments())
+                            {
+                                let productID:NSSet = NSSet(object: self.product_id);
+                                let productsRequest:SKProductsRequest = SKProductsRequest(productIdentifiers: productID as! Set<String>);
+                                productsRequest.delegate = self;
+                                productsRequest.start();
+                                print("Fetching Products");
+                            }else{
+                                print("Can't make purchases");
+                            }
+
+                }
+    
+    
+    func unlockRightSoundEffects() {
+        didSelectRightSide = true
+        didSelectLeftSide = false
+          print("About to fetch the product...")
+
+               // Can make payments
+           
+               if (SKPaymentQueue.canMakePayments())
+                               {
+                                   let productID:NSSet = NSSet(object: self.product_id2);
+                                   let productsRequest:SKProductsRequest = SKProductsRequest(productIdentifiers: productID as! Set<String>);
+                                   productsRequest.delegate = self;
+                                   productsRequest.start();
+                                   print("Fetching Products");
+                               }else{
+                                   print("Can't make purchases");
+                               }
+
+                   }
+
+    func addActivityIndicator() {
+        let rotateRight = SKAction.rotate(byAngle: 30, duration: 5.0)
+        let rotateLeft = SKAction.rotate(byAngle: -30, duration: 5.0)
+        let sequenceRotation = SKAction.sequence([rotateRight, rotateLeft])
+        let repeatSequence = SKAction.repeatForever(sequenceRotation)
+        
+        
+        activityIndicator.position = CGPoint(x: self.size.width / 2.0, y: self.size.height / 3.5)
+        activityIndicator.zPosition = 120
+        activityIndicator.run(repeatSequence, withKey: "stop")
+        activityIndicator.isPaused = false
+        addChild(activityIndicator)
+
+
+    }
+    
+    func buyProduct(product: SKProduct){
+        print("Sending the Payment Request to Apple")
+        let payment = SKPayment(product: product)
+        SKPaymentQueue.default().add(payment)
+        
+        addTransparentBG()//add transparent bacground over all other nodes
+        addActivityIndicator()//add loading icon when purchase request is made
+        
+    }
+    
+    
+    func productsRequest (_ request: SKProductsRequest, didReceive response: SKProductsResponse) {
+
+        if (response.products.count > 0) {
+            let validProduct: SKProduct = response.products[0] as SKProduct
+                print(validProduct.localizedTitle)
+                print(validProduct.localizedDescription)
+                print(validProduct.price)
+                buyProduct(product: validProduct);
+        } else {
+            print("nothing")
+        }
+    }
+
+
+    func request(_ request: SKRequest, didFailWithError error: Error) {
+        print("Error Fetching product information");
+    }
+
+    
+    
+func paymentQueue(_ queue: SKPaymentQueue, updatedTransactions transactions: [SKPaymentTransaction]) {
+print("Received Payment Transaction Response from Apple");
+
+        for transaction:AnyObject in transactions {
+            if let trans:SKPaymentTransaction = transaction as? SKPaymentTransaction{
+                switch trans.transactionState {
+                    
+                case .purchased:
+                    print("Product Purchased");
+                    SKPaymentQueue.default().finishTransaction(transaction as! SKPaymentTransaction)
+                    
+                if didSelectLeftSide {
+                didSelectLeftSide = true
+                    
+                    UserDefaults.standard.set(true , forKey: "unlockSoundEffectleftSide")
+                    UserDefaults().set(true, forKey: "dontshowiap")//iap wont show when bought
+                            
+                    
+                    self.activityIndicator.removeFromParent()//when purchase is complete loading icon is removed
+                    self.activityIndicator.isPaused = true//loading icon paused when purchase is made
+                    self.transparentBackground.removeFromParent()//remove bg when product is purchased
+                        
+                }
+                    
+                    
+                    
+                if didSelectRightSide {
+                didSelectRightSide = true
+                    
+                    UserDefaults.standard.set(true , forKey: "unlockSoundEffectRightSide")
+                    UserDefaults().set(true, forKey: "dontshowiaprightside")//iap wont show when bought
+                            
+                    
+                    self.activityIndicator.removeFromParent()//when purchase is complete loading icon is removed
+                    self.activityIndicator.isPaused = true//loading icon paused when purchase is made
+                    self.transparentBackground.removeFromParent()//remove bg when product is purchased
+
+                    }
+
+                          
+                    break
+                    
+                case .failed:
+                    print("Purchased Failed")
+                    
+                    SKPaymentQueue.default().finishTransaction(transaction as! SKPaymentTransaction)
+                    activityIndicator.removeFromParent()
+                    activityIndicator.isPaused = true
+                    transparentBackground.removeFromParent()
+
+                    break
+
+                case .restored:
+                    print("Already Purchased")
+                    SKPaymentQueue.default().finishTransaction(transaction as! SKPaymentTransaction)
+                    break
+                    
+                default:
+                    break
+                }
+            }
+        }
+
+    }
+    
+    
+    func restorePurchase() {
+        
+        SKPaymentQueue.default().restoreCompletedTransactions()
+    }
+
+    
+func paymentQueueRestoreCompletedTransactionsFinished(_ queue: SKPaymentQueue) {
+    
+print("transactions restored")
+
+for transaction in queue.transactions {
+        let t: SKPaymentTransaction = transaction
+        let prodID = t.payment.productIdentifier as String
+
+        switch prodID {
+                
+        case "UnlockSoundEffectsLeftSide":
+        UserDefaults.standard.set(true , forKey: "unlockSoundEffectleftSide")
+            
+            var alertView = SCLAlertView()
+            let appearance = SCLAlertView.SCLAppearance(showCloseButton: false)
+                
+            alertView = SCLAlertView(appearance: appearance)
+                                    
+            //add action here when okay button is pressed
+            alertView.addButton("Okay") {
+                                        
+            self.activityIndicator.removeFromParent()//removes loading icon when trans are restored
+            self.activityIndicator.isPaused = true//pauses loading icon when trans are restored
+            self.transparentBackground.removeFromParent()//remove bg when product is restored
+            }
+            
+            alertView.showSuccess("Transaction have been restored!", subTitle: "", colorStyle: 0x00A1F9)
+            print("restore the transactions")
+
+                
+        case "UnlockSoundEffectsRightSide":
+        UserDefaults.standard.set(true , forKey: "unlockSoundEffectRightSide")
+
+                var alertView = SCLAlertView()
+                let appearance = SCLAlertView.SCLAppearance(showCloseButton: false)
+                    
+                alertView = SCLAlertView(appearance: appearance)
+                                        
+                //add action here when save button is pressed
+                alertView.addButton("Okay") {
+                                            
+            self.activityIndicator.removeFromParent()//removes loading icon when trans are restored
+            self.activityIndicator.isPaused = true//pauses loading icon when trans are restored
+            self.transparentBackground.removeFromParent()//remove bg when product is restored
+                    
+            }
+            alertView.showSuccess("Transaction have been restored!", subTitle: "", colorStyle: 0x00A1F9)
+            print("restore the transactions")
+
+        default:
+        print("IAP not setup; enable it")
+                    
+            var alertView = SCLAlertView()
+            let appearance = SCLAlertView.SCLAppearance(showCloseButton: false)
+                            
+            alertView = SCLAlertView(appearance: appearance)
+                                                
+            //add action here when okay button is pressed
+            alertView.addButton("Okay") {
+                            
+            }
+                    
+            alertView.showSuccess("There are no purchases to be restored!", subTitle: "", colorStyle: 0x00A1F9)
+                
+        }
+    }
+}
+
+//IN APP PURCHASE CODE---------------------------------------------------------------------------------------------
+    
+    
+    
+    func addSoundsTwo() {
+        
+        let fadeIn = SKAction.fadeIn(withDuration: 1.0)
+        let wait = SKAction.wait(forDuration: 1.0)
+        let wait2 = SKAction.wait(forDuration: 1.5)
+        let wait3 = SKAction.wait(forDuration: 2.0)
+        let wait4 = SKAction.wait(forDuration: 2.5)
+        
+        let sequenceFadeAndWait = SKAction.sequence([wait, fadeIn])
+        let sequenceFadeAndWait2 = SKAction.sequence([wait2, fadeIn])
+        let sequenceFadeAndWait3 = SKAction.sequence([wait3, fadeIn])
+        let sequenceFadeAndWait4 = SKAction.sequence([wait4, fadeIn])
+        
+        
+        kickButton.position = CGPoint(x: self.size.width / 1.37, y: self.size.height / 1.5)
+        kickButton.zPosition = 42
+        kickButton.name = "kick"
+        kickButton.alpha = 0
+        kickButton.run(fadeIn)
+        addChild(kickButton)
+        
+        hatButton.position = CGPoint(x: self.size.width / 1.64, y: self.size.height / 1.5)
+        hatButton.zPosition = 42
+        hatButton.name = "hat"
+        hatButton.alpha = 0
+        hatButton.run(sequenceFadeAndWait)
+        addChild(hatButton)
+        
+        djButton2.position = CGPoint(x: self.size.width / 1.64, y: self.size.height / 2.0)
+        djButton2.zPosition = 42
+        djButton2.name = "scratch2"
+        djButton2.alpha = 0
+        djButton2.run(sequenceFadeAndWait)
+        addChild(djButton2)
+        
+        
+        cymbalButton.position = CGPoint(x: self.size.width / 1.37, y: self.size.height / 2.01)
+        cymbalButton.zPosition = 42
+        cymbalButton.name = "cymbal"
+        cymbalButton.alpha = 0
+        cymbalButton.run(sequenceFadeAndWait2)
+        addChild(cymbalButton)
+        
+        cowButton.position = CGPoint(x: self.size.width / 1.37, y: self.size.height / 3.0)
+        cowButton.zPosition = 42
+        cowButton.name = "cow"
+        cowButton.alpha = 0
+        cowButton.run(sequenceFadeAndWait3)
+        addChild(cowButton)
+        
+        snareButton.position = CGPoint(x: self.size.width / 1.64, y: self.size.height / 3.0)
+        snareButton.zPosition = 42
+        snareButton.name = "snare"
+        snareButton.alpha = 0
+        snareButton.run(sequenceFadeAndWait4)
+        addChild(snareButton)
+        
+        
+        bassButton.position = CGPoint(x: self.size.width / 1.16, y: self.size.height / 1.5)
+        bassButton.zPosition = 42
+        bassButton.name = "bass"
+        bassButton.alpha = 0
+        bassButton.run(sequenceFadeAndWait2)
+        addChild(bassButton)
+        
+        synthButton.position = CGPoint(x: self.size.width / 1.16, y: self.size.height / 2.01)
+        synthButton.zPosition = 42
+        synthButton.name = "synth"
+        synthButton.alpha = 0
+        synthButton.run(sequenceFadeAndWait3)
+        addChild(synthButton)
+        
+        djButton.position = CGPoint(x: self.size.width / 1.16, y: self.size.height / 3.0)
+        djButton.zPosition = 42
+        djButton.name = "dj"
+        djButton.alpha = 0
+        djButton.run(sequenceFadeAndWait4)
+        addChild(djButton)
+        
+        
+        
+        
+    }
+    
+    
+    func addSounds() {
+        let fadeIn = SKAction.fadeIn(withDuration: 1.0)
+        let wait = SKAction.wait(forDuration: 1.0)
+        let wait2 = SKAction.wait(forDuration: 1.5)
+        let wait3 = SKAction.wait(forDuration: 2.0)
+        let wait4 = SKAction.wait(forDuration: 2.5)
+        
+        let sequenceFadeAndWait = SKAction.sequence([wait, fadeIn])
+        let sequenceFadeAndWait2 = SKAction.sequence([wait2, fadeIn])
+        let sequenceFadeAndWait3 = SKAction.sequence([wait3, fadeIn])
+        let sequenceFadeAndWait4 = SKAction.sequence([wait4, fadeIn])
+        
+        clapButton.position = CGPoint(x: self.size.width / 3.7, y: self.size.height / 1.5)
+        clapButton.zPosition = 42
+        clapButton.name = "clap"
+        clapButton.alpha = 0
+        clapButton.run(fadeIn)
+        addChild(clapButton)
+        
+        hornButton.position = CGPoint(x: self.size.width / 2.6, y: self.size.height / 1.5)
+        hornButton.zPosition = 42
+        hornButton.name = "horn"
+        hornButton.alpha = 0
+        hornButton.run(sequenceFadeAndWait)
+        addChild(hornButton)
+        
+        bassDrumButton.position = CGPoint(x: self.size.width / 2.6, y: self.size.height / 2.0)
+        bassDrumButton.zPosition = 42
+        bassDrumButton.name = "bassdrum"
+        bassDrumButton.alpha = 0
+        bassDrumButton.run(sequenceFadeAndWait)
+        addChild(bassDrumButton)
+        
+        bangButton.position = CGPoint(x: self.size.width / 3.7, y: self.size.height / 2.01)
+        bangButton.zPosition = 42
+        bangButton.name = "bang"
+        bangButton.alpha = 0
+        bangButton.run(sequenceFadeAndWait2)
+        addChild(bangButton)
+        
+        bombButton.position = CGPoint(x: self.size.width / 3.7, y: self.size.height / 3.0)
+        bombButton.zPosition = 42
+        bombButton.name = "bomb"
+        bombButton.alpha = 0
+        bombButton.run(sequenceFadeAndWait3)
+        addChild(bombButton)
+        
+        audienceClap.position = CGPoint(x: self.size.width / 2.6, y: self.size.height / 3.0)
+        audienceClap.zPosition = 42
+        audienceClap.name = "clap2"
+        audienceClap.alpha = 0
+        audienceClap.run(sequenceFadeAndWait4)
+        addChild(audienceClap)
+        
+        gunButton2.position = CGPoint(x: self.size.width / 7.0, y: self.size.height / 2.01)
+        gunButton2.zPosition = 42
+        gunButton2.name = "gun"
+        gunButton2.alpha = 0
+        gunButton2.run(sequenceFadeAndWait2)
+        addChild(gunButton2)
+        
+        laserButton.position = CGPoint(x: self.size.width / 7.0, y: self.size.height / 3.0)
+        laserButton.zPosition = 42
+        laserButton.name = "laser"
+        laserButton.alpha = 0
+        laserButton.run(sequenceFadeAndWait3)
+        addChild(laserButton)
+        
+        sirenButton.position = CGPoint(x: self.size.width / 7.0, y: self.size.height / 1.5)
+        sirenButton.zPosition = 42
+        sirenButton.name = "siren"
+        sirenButton.alpha = 0
+        sirenButton.run(sequenceFadeAndWait4)
+        addChild(sirenButton)
+        
+    }
+    
+    
+    
+    
+    
+    func addTurnTables() {
+        leftTurntable.position = CGPoint(x: self.size.width / 3.5, y: self.size.height / 1.9)
+        leftTurntable.zPosition = 20
+        leftTurntable.setScale(1.3)
+        leftTurntable.name = "lefttt"
+        addChild(leftTurntable)
+        
+        rightTurntable.position = CGPoint(x: self.size.width / 1.4, y: self.size.height / 1.9)
+        rightTurntable.zPosition = 20
+        rightTurntable.setScale(1.3)
+        rightTurntable.name = "rightt"
+        addChild(rightTurntable)
+    }
+    
+    
+    
+    
+    //changes the volume when moving slider from left to right.
+    @objc func middleSliderChangeAudio() {
+        
+        let threshold: Float = 0.10
+        let lowerBoundary: Float = 1.0 - threshold
+        let upperBoundary: Float = 1.0 + threshold
+        
+        if didChooseGreenAndBlue {
+            
+            
+            if middleSlider.value < lowerBoundary {
+                middleSlider.minimumTrackTintColor = UIColor.init(red: 0, green: 0.5, blue: 1.0, alpha: 1.0)
+                middleSlider.maximumTrackTintColor = UIColor.init(red: 0, green: 0.5, blue: 1.0, alpha: 1.0)
+                
+                player.volume = 1
+                player2.volume = middleSlider.value
+                print("moves to the left")
+            }
+                
+                
+            else if middleSlider.value <= upperBoundary {
+                player.volume = 1
+                player2.volume = 1
+                middleSlider.value = 1
+                
+                middleSlider.minimumTrackTintColor = UIColor.white
+                middleSlider.maximumTrackTintColor = UIColor.white
+            }
+                
+                
+            else /* must be middleSlider.value > upperBoundary */ {
+                
+                player2.volume = 1
+                player.volume = middleSlider.value - 2
+
+                middleSlider.minimumTrackTintColor = UIColor.green
+                middleSlider.maximumTrackTintColor = UIColor.green
+                
+                print("moves to the right")
+
+            }
+            
+        }
+        
+        
+        if didChooseOrangeAndRedTheme {
+            
+            
+            print("orange and red mixer")
+            if middleSlider.value < lowerBoundary {
+                middleSlider.minimumTrackTintColor = UIColor.orange
+                middleSlider.maximumTrackTintColor = UIColor.orange
+                
+                player.volume = 1
+                player2.volume = 0
+            }
+                
+            else if middleSlider.value <= upperBoundary {
+                player.volume = 1
+                player2.volume = 1
+                middleSlider.value = 1
+                
+                middleSlider.minimumTrackTintColor = UIColor.white
+                middleSlider.maximumTrackTintColor = UIColor.white
+            }
+                
+            else /* must be middleSlider.value > upperBoundary */ {
+                player.volume = 0
+                player2.volume = 1
+                middleSlider.minimumTrackTintColor = UIColor.red
+                middleSlider.maximumTrackTintColor = UIColor.red
+            }
+        }
+        
+        
+        
+        if didChooseYellowAndTurq {
+            
+            print("turq and yellow mixer")
+            
+            if middleSlider.value < lowerBoundary {
+                middleSlider.minimumTrackTintColor = UIColor.init(red: 0, green: 1.0, blue: 0.5, alpha: 1.0)
+                middleSlider.maximumTrackTintColor = UIColor.init(red: 0, green: 1.0, blue: 0.5, alpha: 1.0)
+                
+                player.volume = 1
+                player2.volume = 0
+            }
+                
+                
+            else if middleSlider.value <= upperBoundary {
+                player.volume = 1
+                player2.volume = 1
+                middleSlider.value = 1
+                
+                middleSlider.minimumTrackTintColor = UIColor.white
+                middleSlider.maximumTrackTintColor = UIColor.white
+            }
+                
+            else /* must be middleSlider.value > upperBoundary */ {
+                player.volume = 0
+                player2.volume = 1
+                middleSlider.minimumTrackTintColor = UIColor.yellow
+                middleSlider.maximumTrackTintColor = UIColor.yellow
+            }
+        }
+    }
+    
+
+    @objc func playerItemDidReachEnd(_ notification: Notification) {
+        self.player.seek(to: CMTime.zero)
+        self.player.play()
+    }
+    
+    
+    
+    @objc func playerItemDidReachEnd2(_ notification: Notification) {
+        self.player2.seek(to: CMTime.zero)
+        self.player2.play()
+    }
+    
+    @objc func changeAudioTime() {
+        
+        self.player.seek(to: CMTimeMakeWithSeconds(Float64(slider.value), preferredTimescale: player.currentTime().timescale))
+        
+        NotificationCenter.default.addObserver(self,
+                                               selector: #selector(DJScene.playerItemDidReachEnd(_:)),
+                                               name: NSNotification.Name.AVPlayerItemDidPlayToEndTime,
+                                               object: self.player.currentItem)
+    }
+    
+    
+    @objc func changeAudioTimeSliderRight() {
+        
+        self.player2.seek(to: CMTimeMakeWithSeconds(Float64(sliderRight.value), preferredTimescale: player2.currentTime().timescale))
+        
+        NotificationCenter.default.addObserver(self,
+                                               selector: #selector(DJScene.playerItemDidReachEnd2(_:)),
+                                               name: NSNotification.Name.AVPlayerItemDidPlayToEndTime,
+                                               object: self.player2.currentItem)
+    }
+    
+    
+    @objc func updateSlider() {
+        slider.value = Float(CMTimeGetSeconds((player.currentItem?.currentTime())!))
+        
+    }
+    
+    
+    @objc func updateSlider2() {
+        sliderRight.value = Float(CMTimeGetSeconds((player2.currentItem?.currentTime())!))
+    }
+    
+    func recordItButton() {
+        recordScreenButton.position = CGPoint(x: self.size.width / 2, y: self.size.height / 2)
+        recordScreenButton.zPosition  = 50
+        recordScreenButton.name = "record"
+        addChild(recordScreenButton)
+    }
+    
+    //FOR THE 30 second TIMER=========================================================================================================
+    func startTimerForThritySeconds() {
+        self.timerCountDownLabel = SKLabelNode(fontNamed: "TimeBurner")
+        self.timerCountDownLabel.fontColor = UIColor.white
+        self.timerCountDownLabel.zPosition = 60
+        self.timerCountDownLabel.fontSize = 30
+        self.timerCountDownLabel.position = CGPoint(x: self.size.width / 2.0, y: self.size.height / 2.08)
+        
+        didSelect30Seconds = true
+    }
+    
+    func timeStringForScore(_ score:Int) -> String {
+        let minutes:Int=score/6000;
+        let seconds:Int=(score-minutes*6000)/100
+        let fractions:Int = score-minutes*6000-seconds*100
+        return String(format: "%02d:%02d:%02d", minutes,seconds,fractions)
+    }
+    
+    func updateStopWatch() {
+        self.score += 1
+        timerCountDownLabel.text=self.timeStringForScore(self.score)
+    }
+    
+    @objc func countdown() {
+        timerCountDownLabel.text = String(timerToStartGame)
+        timerToStartGame -= 1
+        if timerToStartGame == -1 {
+            
+            stopRecording()//stops recording after it hits zero
+            timerCountDownLabel.removeFromParent()//removes the 30 sec label
+            recordScreenButton.removeFromParent()//removes record screen button
+            clock.invalidate()//stops the timer
+            timerToStartGame = 29//resets the timer to 30 sec
+        }
+    }
+    //FOR THE 30 second TIMER=========================================================================================================
+    
+    
+    //FOR THE 60 second TIMER=========================================================================================================
+    func startTimerForSixtySeconds() {
+        //this function is called to start the countdown timer.
+        self.timerCountDownLabelsixtySeconds = SKLabelNode(fontNamed: "TimeBurner")
+        self.timerCountDownLabelsixtySeconds.fontColor = UIColor.white
+        self.timerCountDownLabelsixtySeconds.zPosition = 60
+        self.timerCountDownLabelsixtySeconds.fontSize = 30
+        self.timerCountDownLabelsixtySeconds.position = CGPoint(x: self.size.width / 2.0, y: self.size.height / 2.08)
+        didSelect60Seconds = true
+    }
+    
+    func timeStringForScore2(_ score:Int) -> String {
+        let minutes:Int=score2/6000;
+        let seconds:Int=(score2-minutes*6000)/100
+        let fractions:Int = score2-minutes*6000-seconds*100
+        return String(format: "%02d:%02d:%02d", minutes,seconds,fractions)
+    }
+    
+    func updateStopWatch2() {
+        self.score2 += 1
+        timerCountDownLabelsixtySeconds.text=self.timeStringForScore2(self.score2)
+    }
+    
+    @objc func countdown2() {
+        
+        timerCountDownLabelsixtySeconds.text = String(timerForSixtySeconds)
+        timerForSixtySeconds -= 1
+        if timerForSixtySeconds == -1 {
+            
+            stopRecording()//stops recording after it hits zero
+            timerCountDownLabelsixtySeconds.removeFromParent()//removes the 60 sec label
+            recordScreenButton.removeFromParent()//removes record screen button
+            clock2.invalidate()//stops the timer
+            timerForSixtySeconds = 59//resets the timer to 60 sec
+        }
+    }
+    //FOR THE 60 second TIMER=========================================================================================================
+    
+    
+//FOR THE UNLIMITED TIMER=========================================================================================================
+    
+    func startTimerForUnlimited() {
+        //this function is called to start the countdown timer.
+        self.timerCountDownLabelUnlimited = SKLabelNode(fontNamed: "HelveticaNeue-Bold")
+        self.timerCountDownLabelUnlimited.fontColor = UIColor.white
+        self.timerCountDownLabelUnlimited.zPosition = 102
+        self.timerCountDownLabelUnlimited.fontSize = 14
+        self.timerCountDownLabelUnlimited.position = CGPoint(x: self.size.width / 2.0, y: self.size.height / 2.05)
+        self.timerCountDownLabelUnlimited.isUserInteractionEnabled = false
+        didSelectUnlimitedSeconds = true
+    }
+    
+    func timeStringForScore3(_ time:TimeInterval) -> String {
+        let minutes = Int(time) / 60 % 60
+        let seconds = Int(time) % 60
+        return String(format:"%02i:%02i", minutes, seconds)
+    }
+    
+    @objc func updateStopWatch3() {
+        self.timeCount += 1
+        timerCountDownLabelUnlimited.text = timeStringForScore3(timeCount)
+    }
+    
+//FOR THE UNLIMITED TIMER====================================================================================================
+    
+    
+    @objc func changeTimer(_ sender: UISegmentedControl) {
+        switch sender.selectedSegmentIndex {
+        case 1:
+            print("sixty")
+            
+            startTimerForSixtySeconds()
+            timerCountDownLabel.removeFromParent()
+            timerCountDownLabelUnlimited.removeFromParent()
+            
+            didSelect60Seconds = true
+            didSelect30Seconds = false
+            didSelectUnlimitedSeconds = false
+            
+            
+        case 2:
+            print("unlimited")
+            startTimerForUnlimited()
+            timerCountDownLabel.removeFromParent()
+            timerCountDownLabelsixtySeconds.removeFromParent()
+            
+            didSelect30Seconds = false
+            didSelect60Seconds = false
+            didSelectUnlimitedSeconds = true
+            
+        default:
+            print("thirty")
+            
+            startTimerForThritySeconds()
+            timerCountDownLabelsixtySeconds.removeFromParent()
+            timerCountDownLabelUnlimited.removeFromParent()
+            
+            didSelect30Seconds = true
+            didSelect60Seconds = false
+            didSelectUnlimitedSeconds = false
+        }
+    }
+    
+//ADD Cameraaaa ==============================================================================================================
+    
+func addCamera() {
+    
+        if UIDevice.current.userInterfaceIdiom == .phone {
+            previewCamera.frame = CGRect(x: self.view!.bounds.width/2 * 0.52, y: self.view!.bounds.height/2 * 0.4, width: self.view!.bounds.width/2 - 20/2, height: self.view!.bounds.height/2 * 1.28)
+            previewLayer.frame = previewCamera.bounds
+            self.view?.addSubview(previewCamera)
+            
+        }
+        
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            previewCamera.frame = CGRect(x: 255, y: 225, width: 500, height: 400)
+            previewLayer.frame = previewCamera.bounds
+            self.view?.addSubview(previewCamera)
+        }
+        
+    let videoDevices = AVCaptureDevice.devices(for: AVMediaType.video)
+    for device in videoDevices{
+        if device.position == AVCaptureDevice.Position.front {
+                captureDevice = device
+                break
+                
+            }
+        }
+        
+        do {
+            let input = try AVCaptureDeviceInput(device: captureDevice)
+            let error: NSError? = nil
+            if error == nil && captureSession!.canAddInput(input) {
+                
+                captureSession!.addInput(input)
+                stillImageOutput = AVCaptureStillImageOutput()
+                stillImageOutput?.outputSettings = [AVVideoCodecKey: AVVideoCodecJPEG]
+                
+                if captureSession!.canAddOutput(stillImageOutput!) {
+                    
+                    captureSession!.addOutput(stillImageOutput!)
+                    previewLayer = AVCaptureVideoPreviewLayer(session: captureSession!)
+                    previewLayer.videoGravity = AVLayerVideoGravity.resizeAspectFill
+                    previewLayer.connection?.videoOrientation = AVCaptureVideoOrientation.landscapeRight
+                    previewCamera.layer.addSublayer(previewLayer)
+                    captureSession!.startRunning()
+                    print("camera opens")
+                }
+            }
+        } catch {
+            
+            
+            let alert = UIAlertController(title: "Alert", message: " Please go to Settings and allow DJ30 to access the camera.", preferredStyle: UIAlertController.Style.alert)
+            
+            // show the alert
+            self.view!.window?.rootViewController!.present(alert, animated: true, completion: nil)
+            
+            alert.addAction(UIAlertAction(title: "Okay", style: UIAlertAction.Style.destructive, handler: { action in
+                // add action
+        }))
+            
+         print("NO")
+    }
+}
+    
+//LIVE STREAM REPLAYKIT=============================================================================================
+
+    func broadcastActivityViewController(_ broadcastAVC: RPBroadcastActivityViewController, didFinishWith broadcastController: RPBroadcastController?, error: Error?) {
+        print("=====hello delegate \(String(describing: broadcastController?.broadcastURL)) (error)")
+        
+        self.recordItButton()
+        
+        
+        self.broadcastController = broadcastController
+        self.broadcastController?.delegate = self
+       
+        broadcastAVC.dismiss(animated: true) {
+            self.broadcastController?.startBroadcast(handler: { error in
+                
+                print("start broadcast \(String(describing: error))")
+                print("\(String(describing: broadcastController?.broadcastExtensionBundleID))")
+                print("==url=\(String(describing: broadcastController?.broadcastURL))")
+                print("==serviceInfo=\(String(describing: broadcastController?.serviceInfo))")
+                
+                //adds the stop live button when live
+                self.stopLiveButton.position = CGPoint(x: self.size.width / 2.0, y:self.size.height / 2.0)
+                self.stopLiveButton.name = "stoplive"
+                self.stopLiveButton.zPosition = 100
+                self.addChild(self.stopLiveButton)
+                
+                let fadeIN = SKAction.fadeIn(withDuration: 0.5)
+                let fadeOUT = SKAction.fadeOut(withDuration: 0.5)
+                let sequenceFade = SKAction.sequence([fadeIN, fadeOUT])
+                let repeatFade = SKAction.repeatForever(sequenceFade)
+                
+                //on air button flashes when live
+                self.onAir.position = CGPoint(x: self.size.width / 2.0, y:self.size.height / 1.55)
+                self.onAir.zPosition = 100
+                self.onAir.setScale(0.8)
+                self.onAir.run(repeatFade)
+                self.addChild(self.onAir)
+                
+                self.recordScreenButton.removeFromParent()//removes the record screen button when screen is being recorded live
+                
+                self.goLiveButton.removeFromParent()//removes go live button when screen is being recorded live
+                
+                RPScreenRecorder.shared().isMicrophoneEnabled = true
+        })
+    }
+}
+    
+    
+func broadcastController(_ broadcastController: RPBroadcastController, didFinishWithError error: Error?) {
+        print("broadcastController====delegate")
+        
+    let alert = UIAlertController(title: "Alert", message: "There was an error broadcasting your screen. Please try again", preferredStyle: UIAlertController.Style.alert)
+        
+        // show the alert
+        self.view!.window?.rootViewController!.present(alert, animated: true, completion: nil)
+        
+    alert.addAction(UIAlertAction(title: "Okay", style: UIAlertAction.Style.destructive, handler: { action in
+            
+            // add action
+            self.stopLiveButton.removeFromParent()
+            self.onAir.removeFromParent()
+            
+            self.goLiveButton.position = CGPoint(x: self.size.width / 2.0, y:self.size.height / 2.0)    
+            self.goLiveButton.name = "live"
+            self.goLiveButton.zPosition = 100
+            self.addChild(self.goLiveButton)
+            
+            self.recordItButton()
+    }))
+}
+    
+    
+
+
+func broadcastController(_ broadcastController: RPBroadcastController, didUpdateServiceInfo serviceInfo: [String : NSCoding & NSObjectProtocol]) {
+        print("broadcastController====didUpdateServiceInfo")
+}
+    
+//LIVE STREAM REPLAYKIT======================================================================================================
+    
+    
+    
+    
+    
+//REPLAYKIT---------------------------------------------------------------------------------------------------------
+
+func startRecoding() {
+    let recorder = RPScreenRecorder.shared()
+    
+        recorder.startRecording(handler: { (error) in
+                
+                
+if error == nil { // Recording has started
+
+                    self.goLiveButton.isHidden = true
+    
+                    self.startTimerForUnlimited()
+    
+                    self.clock3 = Timer.scheduledTimer(timeInterval: 1.0, target: self, selector: #selector(DJScene.updateStopWatch3), userInfo: nil, repeats: true)
+    
+                    self.addChild(self.timerCountDownLabelUnlimited) //add label when screen is recording
+
+
+                        
+                        self.stopRecordButton.position = CGPoint(x: self.size.width / 2, y: self.size.height / 2)
+                        self.stopRecordButton.zPosition  = 100
+                        self.stopRecordButton.name = "stoprecord"
+                        self.addChild(self.stopRecordButton)
+                        
+                        self.recordScreenButton2.removeFromParent()
+                        self.recordScreenButton.removeFromParent()
+                       
+                        //self.didSelect60Seconds = false
+                        //self.didSelect30Seconds = false
+    
+                        // record button flash when recording starts
+                        self.flash.position = CGPoint(x: self.size.width / 2, y: self.size.height / 2)
+                        self.flash.zPosition = 6
+                        self.addChild(self.flash)
+                        let fadeInFlash = SKAction.fadeIn(withDuration: 0.5)
+                        let fadeOutFlash = SKAction.fadeOut(withDuration: 0.5)
+                        let sequenceFlash = SKAction.sequence([fadeInFlash, fadeOutFlash])
+                        let repeatFlash = SKAction.repeatForever(sequenceFlash)
+                        self.flash.run(repeatFlash, withKey: "removeflash")
+
+                    
+if UIDevice.current.userInterfaceIdiom == .pad {
+                        
+                        self.timerCountDownLabel.position = CGPoint(x: self.size.width / 2.0, y: self.size.height / 2.07)
+                        
+}
+                    
+if UIDevice.current.userInterfaceIdiom == .phone && ScreenSize.maxLength < 568.0 {
+                        
+                        self.timerCountDownLabel.position = CGPoint(x: self.size.width / 2.0, y: self.size.height / 2.07)
+                        
+}
+    
+/*//only will run if music is picked and playing
+    if self.player.currentItem?.status == AVPlayerItem.Status.readyToPlay {
+                        
+                        self.player.pause()
+                        self.leftPlayButton.isHidden = false
+                        self.leftPauseButton.isHidden = true
+                        self.leftTurntable.removeAction(forKey: "stoprotate")
+}
+                    
+//only will run if music is picked and playing
+    if self.player2.currentItem?.status == AVPlayerItem.Status.readyToPlay {
+                        
+                        self.player2.pause()
+                        self.rightPlayButton.isHidden = false
+                        self.rightPauseButton.isHidden = true
+                        self.rightTurntable.removeAction(forKey: "stoprotate")
+}*/
+    
+} else {
+                    // Handle error
+                    print("Dont Allow Recording")
+                    
+                    self.recordScreenButton2.removeFromParent()
+                    
+                    //show settings button if user presses "dont allow recording"
+                    self.settingsButton.position = CGPoint(x: self.size.width / 1.2, y: self.size.height / 5.5)
+                    self.settingsButton.zPosition = 100
+                    self.settingsButton.name = "settings"
+                    self.addChild(self.settingsButton)
+                    
+                    //bring back golive button
+                    self.goLiveButton.isHidden = false
+        }
+})
+            
+    }
+
+    
+    
+func stopRecording() {
+        
+let sharedRecorder = RPScreenRecorder.shared()
+sharedRecorder.stopRecording(handler: { (previewViewController: RPPreviewViewController?, error) in
+            
+if previewViewController != nil {
+                print("stopped recording")
+                
+                previewViewController!.previewControllerDelegate = self
+                
+                    self.view?.window?.rootViewController?.present(previewViewController!, animated: true, completion: nil)
+                    self.player.pause()
+                    self.player2.pause()
+                    self.recordScreenButton2.removeFromParent()
+                    self.flash.removeFromParent()
+                    self.flash.removeAction(forKey: "removeflash")
+}
+                
+                
+else {
+                print("recording stopped working")
+    
+    //create the alert================================================================================================================
+                
+    let alert = UIAlertController(title: "Alert", message: "Sorry, there was an error recording your screen. Please Try Again!", preferredStyle: UIAlertController.Style.alert)
+                
+                // show the alert
+                self.view!.window?.rootViewController!.present(alert, animated: true, completion: nil)
+                
+    alert.addAction(UIAlertAction(title: "Try Again!", style: UIAlertAction.Style.destructive, handler: { action in
+                    // add action
+                    
+                    //removes record buttons
+                    self.recordScreenButton2.removeFromParent()
+                    self.recordScreenButton.removeFromParent()
+                    
+                    //removes stop record button
+                    self.stopRecordButton.removeFromParent()
+                    
+                    //adds record button again
+                    self.recordItButton()
+                    
+                    //shows go live button if there is an error
+                    self.goLiveButton.isHidden = true
+                    
+                    
+                    self.settingsButton.position = CGPoint(x: self.size.width / 1.2, y: self.size.height / 5.5)
+                    self.settingsButton.zPosition = 100
+                    self.settingsButton.name = "settings"
+                    self.addChild(self.settingsButton)
+            }))
+        }
+    })
+}
+    
+   
+func screenRecorder(_ screenRecorder: RPScreenRecorder, didStopRecordingWithError error: Error, previewViewController: RPPreviewViewController?) {
+        print("error in screen reocrding")
+}
+    
+    
+func previewControllerDidFinish(_ previewViewController: RPPreviewViewController) {
+    
+print("cancel and save button pressed")
+
+    
+previewViewController.dismiss(animated: true, completion: nil)//dismiss preview view controller when save or cancel button pressed
+    
+    
+        
+//when cancel or save button pressed, will only run when music is playing and picked
+    if player2.currentItem?.status == AVPlayerItem.Status.readyToPlay {
+            self.rightPauseButton.isHidden = true
+            rightTurntable.removeAction(forKey: "stoprotate")
+            self.rightPlayButton.isHidden = false
+}
+        
+    if player.currentItem?.status == AVPlayerItem.Status.readyToPlay {
+            self.leftPauseButton.isHidden = true
+            leftTurntable.removeAction(forKey: "stoprotate")
+            self.leftPlayButton.isHidden = false
+}
+    
+//will still record only 30 seconds after pressing save or cancel button
+    
+if didSelect30Seconds {
+            startTimerForThritySeconds()
+}
+        
+        
+//will still record only 60 seconds after pressing save or cancel button
+    
+if didSelect60Seconds {
+            startTimerForSixtySeconds()
+}
+        
+//will still record unlimited seconds after pressing save or cancel button
+    
+if didSelectUnlimitedSeconds {
+            stopRecordButton.removeFromParent()
+}
+    
+//settings button will show when cancel or save button is pressed
+        settingsButton.position = CGPoint(x: self.size.width / 1.2, y: self.size.height / 5.5)
+        settingsButton.zPosition = 100
+        settingsButton.name = "settings"
+        addChild(settingsButton)
+    
+        
+//will show record screen button when cancel or save button is pressed
+        recordItButton()
+    
+        
+//show record live button
+        self.goLiveButton.isHidden = false
+    
+}
+    
+//REPLAYKIT-------------------------------------------------------------------------------------------------------------------
+    
+    
+    
+    
+//MEDIAPLAYER-----------------------------------------------------------------------------------------------------------------
+    func mediaPicker(_ mediaPicker: MPMediaPickerController, didPickMediaItems mediaItemCollection: MPMediaItemCollection) {
+        
+        if isMediaPickerOne {
+            isMediaPickerTwo = false
+            let aMediaItem = mediaItemCollection.items[0] as MPMediaItem
+            music = aMediaItem
+            NSLog("\(String(describing: aMediaItem.title))selected")
+            
+            let url: URL = (music.value(forProperty: MPMediaItemPropertyAssetURL) as? URL)!
+            
+            player =  AVPlayer(url: url)
+            player.pause()
+            
+            
+            
+            leftPlayButton.isHidden = false
+            leftTurntable.removeAction(forKey: "stoprotate")
+            
+            titleLabel2.text = music.title
+            leftTurntable2.removeFromParent()//removes dummy turntable
+        }
+        
+        if isMediaPickerTwo {
+            isMediaPickerOne = false
+            let aMediaItem2 = mediaItemCollection.items[0] as MPMediaItem
+            music2 = aMediaItem2
+            NSLog("\(String(describing: aMediaItem2.title))selected")
+            let url2: URL = (music2.value(forProperty: MPMediaItemPropertyAssetURL) as? URL)!
+            
+            player2 =  AVPlayer(url: url2)
+            player2.pause()
+            
+            
+            rightPlayButton.isHidden = false
+            rightTurntable.removeAction(forKey: "stoprotate")
+            
+            titleLabel.text = music2.title
+            
+            rightTurntable2.removeFromParent()//removes dummy turntable
+        }
+        
+        mediaPicker.dismiss(animated: true, completion: nil)
+        middleSlider.isUserInteractionEnabled = true//enable middle slider after music is selected
+        self.enableRateEqualsToFalse = true//enables rate
+        self.enableRateEqualsToFalse2 = true//enables rate
+        middleSlider.value = 1//sets slider to the middle when picking songs
+        middleSlider.minimumTrackTintColor = UIColor.white//sets slider color left to white.
+        middleSlider.maximumTrackTintColor = UIColor.white//sets slider color right to white also.
+        
+    }
+    
+    func mediaPickerDidCancel(_ mediaPicker: MPMediaPickerController) {
+        mediaPicker.dismiss(animated: true, completion: nil)
+    }
+    
+//MEDIAPLAYER----------------------------------------------------------------------------------------------
+    
+func alertForInAppPurchase() {
+
+    var alertView = SCLAlertView()
+                        
+    let appearance = SCLAlertView.SCLAppearance(showCloseButton: false)
+        
+    alertView = SCLAlertView(appearance: appearance)
+                            
+                    //add action here when save button is pressed
+                            alertView.addButton("Purchase now") {
+                            print("show inapp purchase")
+                                
+                                self.unlockLeftSoundEffects()
+                                self.closeLeftSoundEffects()
+
+                    }
+        
+                alertView.addButton("Close") {
+                print("close in app purchase prompt")
+                    self.closeLeftSoundEffects()
+                    
+                }
+
+
+                let bulletPoint: String = "\u{2022}"//can display a bullet point in a string.
+                alertView.showSuccess("9 Sound Effects for $0.99!", subTitle:"\(bulletPoint)Siren \n\(bulletPoint)Clap \n\(bulletPoint)Horn\n\(bulletPoint)Bang\n\(bulletPoint)Bang2  \n\(bulletPoint)BassDrum \n\(bulletPoint)Laser\n\(bulletPoint)Bomb\n\(bulletPoint)Cheer", colorStyle: 0x00A1F9)
+}
+    
+    
+func alertForInAppPurchase2() {
+        var alertView = SCLAlertView()
+        let appearance = SCLAlertView.SCLAppearance(showCloseButton: false)
+            
+        alertView = SCLAlertView(appearance: appearance)
+                                
+                    alertView.addButton("Purchase now") {
+                    print("show inapp purchase")
+                    //add action here when save button is pressed
+                        
+                                self.unlockRightSoundEffects()
+                                self.closeRightSoundEffect()
+                    }
+            
+                    alertView.addButton("Close") {
+                    print("close in app purchase prompt")
+                    self.closeRightSoundEffect()
+                        
+                    }
+
+
+                    let bulletPoint: String = "\u{2022}"//can display a bullet point in a string.
+                    alertView.showSuccess("9 Sound Effects for $0.99!", subTitle:"\(bulletPoint)HiHat\n\(bulletPoint)Kick\n\(bulletPoint)Bass\n\(bulletPoint)Scratch\n\(bulletPoint)Scratch2\n\(bulletPoint)Cymbal\n\(bulletPoint)Synth\n\(bulletPoint)Snare\n\(bulletPoint)CowBell", colorStyle: 0x33DD5D)
+}
+
+                
+                
+    func closeLeftSoundEffects() {
+                leftPlayButton.position = CGPoint(x: self.size.width / 8.0, y: self.size.height / 3.4)
+                leftPlayButton.zPosition = 26
+                leftPlayButton.name = "playleft"
+                addChild(leftPlayButton)
+                
+                leftPauseButton.position = CGPoint(x: self.size.width / 2.2, y: self.size.height / 3.4)
+                leftPauseButton.zPosition = 26
+                leftPauseButton.name = "pauseleft"
+                addChild(leftPauseButton)
+                
+                let moveTORight = SKAction.moveBy(x: 380, y: 0, duration: 0.2)
+                leftTurntable.run(moveTORight)
+                leftTurntable2.run(moveTORight)
+                
+                clapButton.removeFromParent()
+                hornButton.removeFromParent()
+                bangButton.removeFromParent()
+                bombButton.removeFromParent()
+                audienceClap.removeFromParent()
+                bassDrumButton.removeFromParent()
+                sirenButton.removeFromParent()
+                gunButton2.removeFromParent()
+                laserButton.removeFromParent()
+                sfxButton2.removeFromParent()
+                
+                
+                sfxButton.position = CGPoint(x: self.size.width / 28, y: self.size.height / 3.4)
+                sfxButton.zPosition = 42
+                sfxButton.name = "sfx"
+                addChild(sfxButton)
+                
+                
+                settingsButton.isHidden = false
+                unlockCameraButton.isHidden = false
+                cameraButton.isHidden = false
+
+                }
+                
+                
+    func closeRightSoundEffect() {
+                rightPlayButton.position = CGPoint(x: self.size.width / 1.14, y: self.size.height / 3.4)
+                rightPlayButton.zPosition = 26
+                rightPlayButton.name = "playright"
+                addChild(rightPlayButton)
+                
+                rightPauseButton.position = CGPoint(x: self.size.width / 1.82, y: self.size.height / 3.4)
+                rightPauseButton.zPosition = 26
+                rightPauseButton.name = "pauseright"
+                addChild(rightPauseButton)
+
+                
+                kickButton.removeFromParent()
+                snareButton.removeFromParent()
+                hatButton.removeFromParent()
+                cymbalButton.removeFromParent()
+                cowButton.removeFromParent()
+                sfxButtonRight2.removeFromParent()
+                djButton2.removeFromParent()
+                bassButton.removeFromParent()
+                synthButton.removeFromParent()
+                djButton.removeFromParent()
+                
+                sfxButtonRight.position = CGPoint(x: self.size.width / 1.04, y: self.size.height / 3.4)
+                sfxButtonRight.zPosition = 42
+                sfxButtonRight.name = "sfxright"
+                addChild(sfxButtonRight)
+                
+                
+                let moveTOLeft = SKAction.moveBy(x: -375, y: 0, duration: 0.2)
+                rightTurntable.run(moveTOLeft)
+                rightTurntable2.run(moveTOLeft)
+                
+                didCloseBothSFXButtons2 = true
+                settingsButton.isHidden = false
+                unlockCameraButton.isHidden = false
+                cameraButton.isHidden = false
+
+    }
+
+    
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        /* Called when a touch begins */
+        
+        //let rotateRate = (SKAction.rotateByAngle(CGFloat(-M_PI_2), duration: 1.0))
+        //let repeatRotate = SKAction.repeatActionForever(rotateRate)
+        
+        let rotateRate2 = (SKAction.rotate(byAngle: CGFloat(-M_PI_2), duration: 0.7))
+        let repeatRotate2 = SKAction.repeatForever(rotateRate2)
+        
+        let rotateRate3 = (SKAction.rotate(byAngle: CGFloat(-M_PI_2), duration: 2.5))
+        let repeatRotate3 = SKAction.repeatForever(rotateRate3)
+        
+        
+        for touch in touches {
+            let location = touch.location(in: self)
+            let node = self.atPoint(location)
+            
+            let pushDown = SKAction.scale(by: 0.5, duration: 0.1)
+            let pushUp = SKAction.scale(to: 1.0, duration: 0.1)
+            let sequencePushUpAndDown = SKAction.sequence([pushDown, pushUp])
+            
+            if node.name == "lefttt"  {
+            
+                player.pause()
+            
+            }
+            
+            if node.name == "live" {
+                RPBroadcastActivityViewController.load { (broadcastAVC, error) in
+                    if let broadcastAVC = broadcastAVC {
+                        broadcastAVC.delegate = self
+                        self.view?.window?.rootViewController?.present(broadcastAVC, animated: true)
+                        //self.run(self.recordSound)
+                        
+                        self.recordScreenButton.removeFromParent()
+                    }
+                }
+            }
+            
+            
+            if node.name == "stoplive" {
+                
+                self.broadcastController?.finishBroadcast { error in
+
+                    if error == nil {
+                        
+                        self.goLiveButton.position = CGPoint(x: self.size.width / 2.0, y:self.size.height / 2.0)
+                        self.goLiveButton.name = "live"
+                        self.goLiveButton.zPosition = 100
+                        self.addChild(self.goLiveButton)
+                        
+                        self.stopLiveButton.removeFromParent()
+                        self.onAir.removeFromParent()
+                        self.recordItButton()
+                        
+                        //RPScreenRecorder.shared().isMicrophoneEnabled = false
+                        
+
+                        
+                        //self.run(self.recordSound)
+                        print("stop broadcast")
+                    }
+                }
+            }
+            
+            if node.name == "addrate" {
+                if player.currentItem?.canPlayFastForward == true {
+                    player.rate = 2.0
+                    
+                    leftPauseButton.isHidden = false
+                    leftPlayButton.isHidden = true
+                    
+                    
+                    leftTurntable.run(repeatRotate2, withKey: "fast")
+                    
+                    lastNodeSelected3 = node
+                }
+            }
+            
+            if node.name == "restore" {
+                
+                var alertView = SCLAlertView()
+                let appearance = SCLAlertView.SCLAppearance(showCloseButton: false)
+                    
+                alertView = SCLAlertView(appearance: appearance)
+                                        
+                                //add action here when restore button is pressed
+                                        alertView.addButton("Restore Now") {
+                                        print("restore button pressed")
+                                            self.restorePurchase()
+                                }
+                
+                                //closes restore purchase alert view
+                                        alertView.addButton("Close") {
+                                        print("restore view closed")
+                                }
+
+                    
+                    alertView.showSuccess("Restore Purchases", subTitle:"Would you like to restore your purchases?", colorStyle: 0x00A1F9)
+            }
+            
+            
+            if node.name == "settings" {
+                
+                pressSettingsButton()
+                stopLiveButton.isHidden = true
+                goLiveButton.isHidden = true
+                
+                
+                sfxButton.isHidden = true
+                sfxButtonRight.isHidden = true
+                recordScreenButton.isHidden = true
+                recordScreenButton2.isHidden = true
+                
+                settingsButton.run(sequencePushUpAndDown)
+                let moveUp = SKAction.moveBy(x: 0, y: 375, duration: 0.2)
+                
+                leftTurntable.run(moveUp)
+                rightTurntable.run(moveUp)
+                leftTurntable2.run(moveUp)
+                rightTurntable2.run(moveUp)
+                
+                settingsButton.removeFromParent()
+                unlockCameraButton.isHidden = true
+                cameraButton.isHidden = true
+                
+                
+
+                
+                
+                closeSettingsButton.position = CGPoint(x: self.size.width / 1.2, y: self.size.height / 5.5)
+                closeSettingsButton.zPosition = 100
+                closeSettingsButton.name = "closesettings"
+                addChild(closeSettingsButton)
+                
+                if UIDevice.current.userInterfaceIdiom == .pad {
+                    closeSettingsButton.position = CGPoint(x: self.size.width / 1.2, y: self.size.height / 14.0)
+                }
+                
+            }
+            
+            if node.name == "closesettings" {
+                
+               stopLiveButton.isHidden = false
+               goLiveButton.isHidden = false
+                
+                
+                closeSettingsButton.run(sequencePushUpAndDown)
+                
+                
+                //removes button and add
+                closeSettingsButton.removeFromParent()
+                
+                let moveDown = SKAction.moveBy(x: 0, y: -375, duration: 0.2)
+                
+                //moves back turntables to original position
+                leftTurntable.run(moveDown)
+                rightTurntable.run(moveDown)
+                leftTurntable2.run(moveDown)
+                rightTurntable2.run(moveDown)
+                
+                
+                //shows sfx buttons
+                sfxButton.isHidden = false
+                sfxButtonRight.isHidden = false
+                recordScreenButton.isHidden = false
+                recordScreenButton2.isHidden = false
+                
+                
+                //add settings button back
+                settingsButton.position = CGPoint(x: self.size.width / 1.2, y: self.size.height / 5.5)
+                settingsButton.zPosition = 100
+                settingsButton.name = "settings"
+                addChild(settingsButton)
+                
+                if UIDevice.current.userInterfaceIdiom == .pad {
+                    settingsButton.position = CGPoint(x: self.size.width / 1.2, y: self.size.height / 14.0)
+                }
+
+                
+                //add piano button back
+                unlockCameraButton.isHidden = false
+                cameraButton.isHidden = false
+                
+                //customSC.removeFromSuperview()//removes segmented controls
+                customSC2.removeFromSuperview()
+                changeThemeLabel.removeFromParent()
+                changeTimeLabel.removeFromParent()
+                restorePurchasesButton.removeFromParent()
+            }
+            
+            if node.name == "camera" {
+                
+                addCamera()
+                
+                
+                sfxButton.isHidden = true
+                sfxButtonRight.isHidden = true
+                
+                cameraButton.run(sequencePushUpAndDown)
+                
+                let moveDown = SKAction.moveBy(x: 0, y: -475, duration: 0.2)
+                leftTurntable.run(moveDown)
+                rightTurntable.run(moveDown)
+                leftTurntable2.run(moveDown)
+                rightTurntable2.run(moveDown)
+                
+                settingsButton.isHidden = true
+                recordScreenButton.isHidden = true
+                recordScreenButton2.isHidden = true
+                divideTT.isHidden = true
+                cameraButton.removeFromParent()
+                
+                //show close camera button
+                pianoButtonClose.position = CGPoint(x: self.size.width / 5.0, y: self.size.height / 5.5)
+                pianoButtonClose.zPosition = 100
+                pianoButtonClose.name = "closepiano"
+                addChild(pianoButtonClose)
+                
+                if UIDevice.current.userInterfaceIdiom == .pad {
+                    pianoButtonClose.position = CGPoint(x: self.size.width / 5.0, y: self.size.height / 14.0)
+                }
+                
+                self.previewCamera.layer.borderWidth = 2
+                self.previewCamera.layer.borderColor = UIColor(red:222/255.0, green:225/255.0, blue:227/255.0, alpha: 1.0).cgColor
+            }
+            
+            
+            
+            if node.name == "closepiano" {
+                
+                pianoButtonClose.run(sequencePushUpAndDown)
+                
+                //removes button and add
+                pianoButtonClose.removeFromParent()
+                previewCamera.removeFromSuperview()
+                previewCamera2.removeFromSuperview()
+                
+                let moveUp = SKAction.moveBy(x: 0, y: 475, duration: 0.2)
+                
+                
+                //moves back turntables to original position
+                leftTurntable.run(moveUp)
+                rightTurntable.run(moveUp)
+                leftTurntable2.run(moveUp)
+                rightTurntable2.run(moveUp)
+                
+                //shows sfx buttons
+                sfxButton.isHidden = false
+                sfxButtonRight.isHidden = false
+                recordScreenButton.isHidden = false
+                recordScreenButton2.isHidden = false
+                divideTT.isHidden = false
+                
+                
+                //add settings button back
+                settingsButton.isHidden = false
+                
+                //add camera button back
+                cameraButton.position = CGPoint(x: self.size.width / 5.0, y: self.size.height / 5.5)
+                cameraButton.zPosition = 100
+                cameraButton.name = "camera"
+                addChild(cameraButton)
+                
+                if UIDevice.current.userInterfaceIdiom == .pad {
+                    cameraButton.position = CGPoint(x: self.size.width / 5.0, y: self.size.height / 14.0)
+                }
+                
+
+                
+            }
+            
+            if node.name == "addmusictoright" {
+                addMusicToRightTurntable.run(sequencePushUpAndDown)
+                
+                mediaPicker2 = MPMediaPickerController(mediaTypes: .anyAudio)
+                
+                if let picker = mediaPicker2{
+                    isMediaPickerTwo = true
+                    isMediaPickerOne = false
+                    
+                    print("Successfully open media picker Right")
+                    picker.delegate = self
+                    picker.allowsPickingMultipleItems = false
+                    picker.showsCloudItems = false
+                    AppDelegate.canRotate = true
+                    picker.prompt = "Please pick one song for the right turntable!"
+                    self.view?.window?.rootViewController!.present(picker, animated: true, completion: nil)
+                } else {
+                    print("PICKER WONT OPEN")
+                }
+            }
+            
+            if node.name == "addmusictoleft" {
+                addMusicToLeftTurntable.run(sequencePushUpAndDown)
+                
+                mediaPicker = MPMediaPickerController(mediaTypes: .anyAudio)
+                
+                if let picker2 = mediaPicker {
+                    isMediaPickerOne = true
+                    isMediaPickerTwo = false
+                    
+                    print("Successfully open media picker Left")
+                    picker2.delegate = self
+                    picker2.allowsPickingMultipleItems = false
+                    picker2.showsCloudItems = false
+                    AppDelegate.canRotate = true
+
+                    picker2.prompt = "Please pick one song for the left turntable!"
+                    self.view?.window?.rootViewController!.present(picker2, animated: true, completion: nil)
+                } else {
+                    print("PICKER WONT OPEN")
+                }
+            }
+            
+            if node.name == "downrate" {
+                
+                if player.currentItem?.canPlaySlowForward == true {
+                    player.rate = 0.5
+                    
+                    leftPauseButton.isHidden = false
+                    leftPlayButton.isHidden = true
+                    leftTurntable.run(repeatRotate3, withKey: "slow")
+                    leftTurntable.removeAction(forKey: "stoprotate")
+                    lastNodeSelected4 = node
+                }
+            }
+            if node.name == "addrate2" {
+                if player2.currentItem?.canPlayFastForward == true {
+                    player2.rate = 2.0
+                    
+                    rightPauseButton.isHidden = false
+                    rightPlayButton.isHidden = true
+                    
+                    
+                    rightTurntable.run(repeatRotate2, withKey: "fast")
+                    
+                    lastNodeSelected5 = node
+                }
+            }
+            
+            if node.name == "downrate2" {
+                
+                if player2.currentItem?.canPlaySlowForward == true {
+                    player2.rate = 0.5
+                    
+                    rightPauseButton.isHidden = false
+                    rightPlayButton.isHidden = true
+                    
+                    
+                    rightTurntable.run(repeatRotate3, withKey: "slow")
+                    rightTurntable.removeAction(forKey: "stoprotate")
+                    
+                    
+                    
+                    lastNodeSelected6 = node
+                }
+            }
+            
+            if node.name == "stoprecord" {
+                
+                timerCountDownLabelUnlimited.removeFromParent()//removes timer
+                recordScreenButton.removeFromParent()//removes record screen button
+                clock3.invalidate()//stops the timer
+                timeCount = 0//resets the timer to 0 sec
+                stopRecording()
+                
+                //play record sound
+                //run(recordSound)
+                
+            }
+            
+            if node.name == "record" {
+                
+                //enables mic
+                RPScreenRecorder.shared().isMicrophoneEnabled = true
+
+                //removes features button when record button is pressed
+                self.settingsButton.removeFromParent()
+
+                //this function will record the screen until stop button is pressed.
+                startRecoding()
+                
+                //when record button is presses another button appears so you cant touch first record button.
+                recordScreenButton2.position = CGPoint(x: self.size.width / 2, y: self.size.height / 2)
+                recordScreenButton2.zPosition = 51
+                addChild(recordScreenButton2)
+                
+                
+                
+            }
+            if node.name == "lefttt"  {
+                leftTurntable.removeAction(forKey: "stoprotate")
+                
+                
+                player.pause()
+                lastNodeSelected = node
+                //leftTurntable.physicsBody?.angularVelocity = 0
+            }
+            if node.name == "rightt" {
+                rightTurntable.removeAction(forKey: "stoprotate")
+                
+                
+                player2.pause()
+                lastNodeSelected2 = node
+            }
+            
+            
+            
+            
+            if node.name == "kick" {
+                kickButton.run(sequencePushUpAndDown)
+                SKTAudio.sharedInstance().playSoundEffect(filename: "kick.wav")
+            }
+            
+            if node.name == "horn" {
+                hornButton.run(sequencePushUpAndDown)
+                SKTAudio.sharedInstance().playSoundEffect(filename: "airhorn.wav")
+            }
+            
+            if node.name == "clap" {
+                clapButton.run(sequencePushUpAndDown)
+                SKTAudio.sharedInstance().playSoundEffect(filename: "clap.wav")
+            }
+            
+            if node.name == "bang" {
+                bangButton.run(sequencePushUpAndDown)
+                SKTAudio.sharedInstance().playSoundEffect(filename: "bang.wav")
+            }
+            
+            if node.name == "clap2" {
+                audienceClap.run(sequencePushUpAndDown)
+                SKTAudio.sharedInstance().playSoundEffect(filename: "cheer.wav")
+            }
+            
+            if node.name == "bomb" {
+                bombButton.run(sequencePushUpAndDown)
+                SKTAudio.sharedInstance().playSoundEffect(filename: "explosion.wav")
+            }
+            
+            if node.name == "cow" {
+                cowButton.run(sequencePushUpAndDown)
+                SKTAudio.sharedInstance().playSoundEffect(filename: "cowbell.wav")
+            }
+            
+            if node.name == "cymbal" {
+                cymbalButton.run(sequencePushUpAndDown)
+                SKTAudio.sharedInstance().playSoundEffect(filename: "cymbal.wav")
+            }
+            
+            if node.name == "hat" {
+                hatButton.run(sequencePushUpAndDown)
+                SKTAudio.sharedInstance().playSoundEffect(filename: "hihat.wav")
+            }
+            
+            if node.name == "snare" {
+                snareButton.run(sequencePushUpAndDown)
+                SKTAudio.sharedInstance().playSoundEffect(filename: "snare.wav")
+            }
+            
+            
+            if node.name == "gun" {
+                gunButton2.run(sequencePushUpAndDown)
+                SKTAudio.sharedInstance().playSoundEffect(filename: "gun2.wav")
+            }
+            
+            if node.name == "siren" {
+                sirenButton.run(sequencePushUpAndDown)
+                SKTAudio.sharedInstance().playSoundEffect(filename: "siren.wav")
+            }
+            if node.name == "laser" {
+                laserButton.run(sequencePushUpAndDown)
+                SKTAudio.sharedInstance().playSoundEffect(filename: "laser2.wav")
+            }
+            
+            if node.name == "dj" {
+                djButton.run(sequencePushUpAndDown)
+                SKTAudio.sharedInstance().playSoundEffect(filename: "dj.wav")
+            }
+            
+            if node.name == "bass" {
+                bassButton.run(sequencePushUpAndDown)
+                SKTAudio.sharedInstance().playSoundEffect(filename: "bass.wav")
+            }
+            
+            if node.name == "synth" {
+                synthButton.run(sequencePushUpAndDown)
+                SKTAudio.sharedInstance().playSoundEffect(filename: "synth.wav")
+            }
+            
+            
+            if node.name == "bassdrum" {
+                bassDrumButton.run(sequencePushUpAndDown)
+                SKTAudio.sharedInstance().playSoundEffect(filename: "bassdrum.wav")
+            }
+            
+            if node.name == "scratch2" {
+                djButton2.run(sequencePushUpAndDown)
+                SKTAudio.sharedInstance().playSoundEffect(filename: "scratch2.wav")
+            }
+            
+            
+            if node.name == "left" {
+                print("slider moves to left")
+                
+                
+                
+                UIView.animate(withDuration: 1, animations: {
+                    self.middleSlider.setValue(self.middleSlider.minimumValue, animated: true)
+                    self.middleSliderChangeAudio()
+                    self.middleSlider.isContinuous = true
+                    
+                    
+                })
+            }
+            
+            if node.name == "right" {
+                print("slider moves to right")
+                
+                UIView.animate(withDuration: 1, animations: {
+                    self.middleSlider.setValue(self.middleSlider.maximumValue, animated: true)
+                    self.middleSliderChangeAudio()
+                    
+                    self.middleSlider.isContinuous = true
+                    
+                })
+            }
+        }
+    }
+    
+    
+    
+    func rotationDelta(fromAngle a0: Double, toAngle a1: Double) -> Double {
+        let π = M_PI
+        return ((a1 - a0).truncatingRemainder(dividingBy: (2*π)) + 3*π).truncatingRemainder(dividingBy: (2*π)) - π
+    }
+    
+    
+    
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+        for touch in touches {
+            let location = touch.location(in: self)
+            let node = self.atPoint(location)
+            
+            if node.name == "lefttt" {
+                //this is for the left turntable
+                
+                if lastNodeSelected != nil {
+                    let touchedNode = lastNodeSelected!
+                    
+                    //lets user rotate left turntable when there is one finger on turntable.
+                    let dy = touchedNode.position.y - location.y
+                    let dx = touchedNode.position.x - location.x
+                    let angle2 = atan2(dy, dx)
+                    touchedNode.zRotation =  angle2
+                    
+                    let delta = rotationDelta(fromAngle: Double(previousAngle), toAngle: Double(angle2)) > 0
+                    //var deltaAngle = angle2 - startingAngle
+                    
+                    
+                    if delta {
+                        
+                        //print("\(delta)")
+                        print("rotateleft")
+                        //deltaAngle = deltaAngle - CGFloat(2*M_PI)
+                        //touchedNode.physicsBody?.angularVelocity = 25
+                        
+                        if player.currentItem?.canPlayFastReverse == true && player.currentItem?.isPlaybackLikelyToKeepUp == true {
+                            player.rate = -5
+                            player.currentItem?.audioTimePitchAlgorithm = AVAudioTimePitchAlgorithm.timeDomain
+                        }
+                    }
+                    else {
+                        //print("\(delta)")
+                        print("rotateright")
+                        
+                        //deltaAngle = deltaAngle + CGFloat(2*M_PI)
+                        //touchedNode.physicsBody?.angularVelocity = -25
+                        
+                        if player.currentItem?.canPlayFastForward == true && player.currentItem?.isPlaybackLikelyToKeepUp == true {
+                            player.rate = 5
+                            player.currentItem?.audioTimePitchAlgorithm = AVAudioTimePitchAlgorithm.timeDomain
+                        }
+                    }
+                    // Update angle and time
+                    //startingAngle = angle2
+                    //startingTime = touch.timestamp
+                    previousAngle = angle2
+                }
+            }
+            //this is for the right turntable
+            if node.name == "rightt" {
+                if lastNodeSelected2 != nil {
+                    let touchedNode2 = lastNodeSelected2!
+                    
+                    //lets user rotate right turntable when there is one finger on turntable.
+                    
+                    let dy = touchedNode2.position.y - location.y
+                    let dx = touchedNode2.position.x - location.x
+                    let angle3 = atan2(dy, dx)
+                    touchedNode2.zRotation = angle3
+                    
+                    let delta = rotationDelta(fromAngle: Double(previousAngleRightSide), toAngle: Double(angle3)) > 0
+                    
+                    if delta {
+                        print("rotateleft")
+                        if player2.currentItem?.canPlayFastReverse == true && player2.currentItem?.isPlaybackLikelyToKeepUp == true {
+                            player2.rate = -5
+                            player2.currentItem?.audioTimePitchAlgorithm = AVAudioTimePitchAlgorithm.timeDomain
+                        }
+                    }
+                        
+                    else {
+                        print("rotateright")
+                        if player2.currentItem?.canPlayFastForward == true && player2.currentItem?.isPlaybackLikelyToKeepUp == true {
+                            player2.rate = 5
+                            player2.currentItem?.audioTimePitchAlgorithm = AVAudioTimePitchAlgorithm.timeDomain
+                        }
+                    }
+                    previousAngleRightSide = angle3
+                }
+            }
+        }
+    }
+    
+    
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        let rotateRate = (SKAction.rotate(byAngle: CGFloat(-M_PI_2), duration: 1.0))
+        let repeatRotate = SKAction.repeatForever(rotateRate)
+        
+        //startingAngle = 0
+        //startingTime = 0
+        
+        for touch in touches {
+            
+            let location = touch.location(in: self)
+            let node = self.atPoint(location)
+            
+            //leftturntable when finger is off the screen
+            if lastNodeSelected != nil {
+                lastNodeSelected!.run(repeatRotate, withKey: "stoprotate")
+                player.play()
+                lastNodeSelected = nil
+                
+                leftPlayButton.isHidden = true
+                leftPauseButton.isHidden = false
+                
+                
+            }
+            
+            //rightturntable when finger is off the screen
+            if lastNodeSelected2 != nil {
+                lastNodeSelected2!.run(repeatRotate, withKey: "stoprotate")//will rotate tt
+                player2.play()//will play music
+                lastNodeSelected2 = nil//will be able to let go anywhere on screen
+                
+                rightPlayButton.isHidden = true//hide play button
+                rightPauseButton.isHidden = false//show pause button
+            }
+            
+            
+            //left add button
+            if lastNodeSelected3 != nil {
+                player.rate = 1//set rate to normal when finger is off add button
+                lastNodeSelected3 = nil
+                
+                leftTurntable.removeAction(forKey: "fast")
+                leftTurntable.run(repeatRotate, withKey: "stoprotate")
+            }
+            
+            
+            //left subtract button
+            if lastNodeSelected4 != nil {
+                player.rate = 1//set rate to normal when finger is off add button
+                lastNodeSelected4 = nil
+                
+                leftTurntable.removeAction(forKey: "slow")
+                leftTurntable.run(repeatRotate, withKey: "stoprotate")
+            }
+            
+            //right add button
+            if lastNodeSelected5 != nil {
+                player2.rate = 1//set rate to normal when finger is off add button
+                lastNodeSelected5 = nil
+                
+                rightTurntable.removeAction(forKey: "fast")
+                
+                
+                rightTurntable.run(repeatRotate, withKey: "stoprotate")
+                
+            }
+            
+            //right subtract button
+            if lastNodeSelected6 != nil {
+                
+                player2.rate = 1//set rate to normal when finger is off add button
+                lastNodeSelected6 = nil
+                rightTurntable.removeAction(forKey: "slow")
+                rightTurntable.run(repeatRotate, withKey: "stoprotate")
+                
+            }
+            
+            if node.name == "playleft" {
+                
+                let duration = self.player.currentItem?.asset.duration
+                let seconds = CMTimeGetSeconds(duration!)
+                
+                
+                
+            //Shows music player time label---------------------------------------------------------
+                    
+                    let interval = CMTime(value: 1, timescale: 1)
+                    self.player.addPeriodicTimeObserver(forInterval: interval, queue: DispatchQueue.main, using: { (progressTime) in
+
+                    let recordingDuration = Float(CMTimeGetSeconds(((self.player.currentItem?.asset.duration)!)))-Float(CMTimeGetSeconds((self.player.currentTime())))
+                        
+                        self.playerTimeLabel.text = getFormatedTime(FromTime: Int(recordingDuration))
+
+                    })
+                    
+            //Shows music player time label---------------------------------------------------------
+
+                
+            //allows slider for left turntable to move and seek by user------------------------------------------------------
+                
+                slider.maximumValue = Float(seconds)
+                slider.addTarget(self, action: #selector(changeAudioTime), for: UIControl.Event.touchDragInside)
+                _ = Timer.scheduledTimer(timeInterval: 0.3, target: self, selector: #selector(updateSlider), userInfo: nil, repeats: true)
+                
+                //allows slider for left turntable to move and seek by user------------------------------------------------------
+                
+                leftPlayButton.isHidden = true
+                leftPauseButton.isHidden = false
+                leftTurntable.run(repeatRotate, withKey: "stoprotate")
+                player.play()
+            }
+            
+            if node.name == "pauseleft" {
+                leftPlayButton.isHidden = false//hides playbutton
+                leftPauseButton.isHidden = true//shows pausebutton
+                leftTurntable.removeAction(forKey: "stoprotate")//turntable stops moving
+                player.pause()//song is paused
+            }
+            
+            func getFormatedTime(FromTime timeDuration:Int) -> String {
+
+              let minutes = Int(timeDuration) / 60 % 60
+              let seconds = Int(timeDuration) % 60
+              let strDuration = String(format:"%02d:%02d", minutes, seconds)
+              return strDuration
+            }
+
+            
+            if node.name == "playright" {
+                
+
+                let duration2 = self.player2.currentItem?.asset.duration
+                let seconds2 = CMTimeGetSeconds(duration2!)
+                
+                
+                rightPlayButton.isHidden = true //hides play button
+                rightPauseButton.isHidden = false//shows pausebutton
+                
+                
+                rightTurntable.run(repeatRotate, withKey: "stoprotate")//turntable starts to move
+                player2.play()//song is played
+                
+              
+            //Shows music player time label---------------------------------------------------------
+                
+                let interval = CMTime(value: 1, timescale: 1)
+                self.player2.addPeriodicTimeObserver(forInterval: interval, queue: DispatchQueue.main, using: { (progressTime) in
+
+                let recordingDuration = Float(CMTimeGetSeconds(((self.player2.currentItem?.asset.duration)!)))-Float(CMTimeGetSeconds((self.player2.currentTime())))
+
+
+                    self.playerTwoTimeLabel.text = getFormatedTime(FromTime: Int(recordingDuration))
+
+
+                })
+                
+            //Shows music player time label---------------------------------------------------------
+
+                
+                    
+
+                
+                
+                //allows slider for left turntable to move and seek by user------------------------------------------------------
+                
+                sliderRight.maximumValue = Float(seconds2)
+                sliderRight.addTarget(self, action: #selector(changeAudioTimeSliderRight), for: UIControl.Event.touchDragInside)
+                _ = Timer.scheduledTimer(timeInterval: 0.3, target: self, selector: #selector(updateSlider2), userInfo: nil, repeats: true)
+                
+                //allows slider for left turntable to move and seek by user------------------------------------------------------
+            }
+            
+            if node.name == "pauseright" {
+                rightPlayButton.isHidden = false
+                rightPauseButton.isHidden = true
+                
+                rightTurntable.removeAction(forKey: "stoprotate")
+                
+                player2.pause()
+            }
+            
+            
+            
+            //opens left side of sound effects
+            if node.name == "sfx" {
+                
+                
+                //disables in app purchase
+                /*if let _ : AnyObject = UserDefaults.standard.object(forKey: "unlockSoundEffectleftSide") as AnyObject? {
+                    print("dont show iap if bought")
+                    
+                } else {
+                    
+                    print("show iap for left side")
+                    alertForInAppPurchase()
+                 }*/
+                
+                
+                
+                let moveTOLeft = SKAction.moveBy(x: -380, y: 0, duration: 0.2)
+                leftTurntable.run(moveTOLeft)
+                leftTurntable2.run(moveTOLeft)
+                
+                addSounds()
+                
+                sfxButton.removeFromParent()
+                
+                
+                sfxButton2.position = CGPoint(x: self.size.width / 28, y: self.size.height / 3.4)
+                sfxButton2.zPosition = 42
+                sfxButton2.name = "sfx2"
+                addChild(sfxButton2)
+                
+                settingsButton.isHidden = true
+                unlockCameraButton.isHidden = true
+                cameraButton.isHidden = true
+                
+                
+                leftPlayButton.removeFromParent()
+                leftPauseButton.removeFromParent()
+            }
+            
+            
+            //closes left side of sound effects
+
+            if node.name == "sfx2" {
+                
+
+                
+                leftPlayButton.position = CGPoint(x: self.size.width / 8.0, y: self.size.height / 3.4)
+                leftPlayButton.zPosition = 26
+                leftPlayButton.name = "playleft"
+                addChild(leftPlayButton)
+                
+                leftPauseButton.position = CGPoint(x: self.size.width / 2.2, y: self.size.height / 3.4)
+                leftPauseButton.zPosition = 26
+                leftPauseButton.name = "pauseleft"
+                addChild(leftPauseButton)
+                
+                let moveTORight = SKAction.moveBy(x: 380, y: 0, duration: 0.2)
+                leftTurntable.run(moveTORight)
+                leftTurntable2.run(moveTORight)
+                
+                clapButton.removeFromParent()
+                hornButton.removeFromParent()
+                bangButton.removeFromParent()
+                bombButton.removeFromParent()
+                audienceClap.removeFromParent()
+                bassDrumButton.removeFromParent()
+                
+                sirenButton.removeFromParent()
+                gunButton2.removeFromParent()
+                laserButton.removeFromParent()
+                
+                
+                sfxButton2.removeFromParent()
+                
+                
+                sfxButton.position = CGPoint(x: self.size.width / 28, y: self.size.height / 3.4)
+                sfxButton.zPosition = 42
+                sfxButton.name = "sfx"
+                addChild(sfxButton)
+                
+                
+                settingsButton.isHidden = false
+                unlockCameraButton.isHidden = false
+                cameraButton.isHidden = false
+                
+                
+                
+            }
+            
+            //opens right side of sound effects
+
+            if node.name == "sfxright" {
+                
+                
+                //disables in app purchases
+                /*if let _ : AnyObject = UserDefaults.standard.object(forKey: "unlockSoundEffectRightSide") as AnyObject? {
+                    print("dont show iap for right side if bought")
+                    
+                } else {
+                    
+                    print("show iap for right side")
+                    alertForInAppPurchase2()
+                    
+                }*/
+
+                let moveTORight = SKAction.moveBy(x: 375, y: 0, duration: 0.2)
+                rightTurntable.run(moveTORight)
+                rightTurntable2.run(moveTORight)
+                
+                sfxButtonRight.removeFromParent()
+                
+                addSoundsTwo()
+                
+                sfxButtonRight2.position = CGPoint(x: self.size.width / 1.04, y: self.size.height / 3.4)
+                sfxButtonRight2.zPosition = 42
+                sfxButtonRight2.name = "sfxright2"
+                addChild(sfxButtonRight2)
+                
+                settingsButton.isHidden = true
+                unlockCameraButton.isHidden = true
+                cameraButton.isHidden = true
+                
+                rightPlayButton.removeFromParent()
+                rightPauseButton.removeFromParent()
+            }
+            
+            //closes right side of sound effects
+
+            if node.name == "sfxright2" {
+                
+
+                
+                rightPlayButton.position = CGPoint(x: self.size.width / 1.14, y: self.size.height / 3.4)
+                rightPlayButton.zPosition = 26
+                rightPlayButton.name = "playright"
+                addChild(rightPlayButton)
+                
+                rightPauseButton.position = CGPoint(x: self.size.width / 1.82, y: self.size.height / 3.4)
+                rightPauseButton.zPosition = 26
+                rightPauseButton.name = "pauseright"
+                addChild(rightPauseButton)
+
+                
+                kickButton.removeFromParent()
+                snareButton.removeFromParent()
+                hatButton.removeFromParent()
+                cymbalButton.removeFromParent()
+                cowButton.removeFromParent()
+                sfxButtonRight2.removeFromParent()
+                djButton2.removeFromParent()
+                bassButton.removeFromParent()
+                synthButton.removeFromParent()
+                djButton.removeFromParent()
+                
+                
+                
+                
+                sfxButtonRight.position = CGPoint(x: self.size.width / 1.04, y: self.size.height / 3.4)
+                sfxButtonRight.zPosition = 42
+                sfxButtonRight.name = "sfxright"
+                addChild(sfxButtonRight)
+                
+                
+                let moveTOLeft = SKAction.moveBy(x: -375, y: 0, duration: 0.2)
+                rightTurntable.run(moveTOLeft)
+                rightTurntable2.run(moveTOLeft)
+                
+                didCloseBothSFXButtons2 = true
+                settingsButton.isHidden = false
+                unlockCameraButton.isHidden = false
+                cameraButton.isHidden = false
+            }
+        }
+    }
+}
